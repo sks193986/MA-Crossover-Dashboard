@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My 21 Investment Portfolio Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; margin-bottom: 30px; font-size: 2.2em; }
+        .stats { display: flex; justify-content: center; gap: 30px; margin-bottom: 30px; }
+        .stat { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; min-width: 150px; }
+        .stat-number { font-size: 2.5em; font-weight: bold; color: #007bff; }
+        .stat-label { font-size: 1em; color: #666; margin-top: 5px; }
+        .check-btn { display: block; margin: 20px auto; padding: 20px 40px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 1.2em; font-weight: bold; cursor: pointer; transition: all 0.3s ease; }
+        .check-btn:hover { background: #218838; transform: translateY(-2px); }
+        .check-btn:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #007bff; color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        tr:hover { background: #e3f2fd; }
+        .above { color: #28a745; font-weight: bold; }
+        .below { color: #dc3545; font-weight: bold; }
+        .unknown { color: #6c757d; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .message { padding: 15px; margin: 15px 0; border-radius: 8px; font-weight: bold; }
+        .message.success { background: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
+        .message.error { background: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+        .alerts { margin-top: 40px; }
+        .alerts h3 { color: #333; margin-bottom: 20px; font-size: 1.5em; }
+        .alert-item { padding: 20px; margin: 15px 0; border-radius: 10px; border-left: 6px solid #007bff; background: #f8f9fa; }
+        .alert-item.bullish { border-left-color: #28a745; background: #d4edda; }
+        .alert-item.bearish { border-left-color: #dc3545; background: #f8d7da; }
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .stats { flex-direction: column; align-items: center; }
+            .stat { margin-bottom: 15px; }
+            h1 { font-size: 1.8em; }
+            .check-btn { padding: 15px 30px; font-size: 1.1em; }
+            table { font-size: 0.9em; }
+            th, td { padding: 10px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 My 21 Investment Portfolio Dashboard</h1>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number" id="total-investments">21</div>
+                <div class="stat-label">Total Investments</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="above-ma">0</div>
+                <div class="stat-label">Above 50-day MA</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="below-ma">0</div>
+                <div class="stat-label">Below 50-day MA</div>
+            </div>
+        </div>
+
+        <button class="check-btn" onclick="checkAllInvestments()" id="check-btn">
+            🔄 Check All My Investments
+        </button>
+
+        <div id="messages"></div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Investment Name</th>
+                    <th>Type</th>
+                    <th>Current Price</th>
+                    <th>50-day MA</th>
+                    <th>Position vs MA</th>
+                    <th>Distance %</th>
+                    <th>Last Alert</th>
+                </tr>
+            </thead>
+            <tbody id="portfolio-table">
+                <!-- Investment rows will be populated here -->
+            </tbody>
+        </table>
+
+        <div class="alerts">
+            <h3>🚨 MA Crossover Alerts</h3>
+            <div id="alerts-list">
+                <div style="text-align: center; padding: 30px; color: #666; font-size: 1.1em;">
+                    📊 No crossover alerts yet.<br>
+                    Click "Check All My Investments" to start monitoring for 50-day moving average crossovers!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'KKV2RG3N00OPLLW1';
+        
+        const investments = [
+            { symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'Large Cap ETF' },
+            { symbol: 'VEA', name: 'Vanguard Developed Markets ETF', type: 'International ETF' },
+            { symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', type: 'Broad Market ETF' },
+            { symbol: 'EWJ', name: 'iShares MSCI Japan ETF', type: 'Country ETF' },
+            { symbol: 'VWO', name: 'Vanguard Emerging Markets ETF', type: 'Emerging Markets ETF' },
+            { symbol: 'HMEF', name: 'HSBC MSCI Emerging Markets UCITS ETF', type: 'Emerging Markets ETF' },
+            { symbol: 'RIO', name: 'Amundi MSCI Brazil ETF ACC', type: 'Country ETF' },
+            { symbol: 'LCCN', name: 'Amundi MSCI China ETF ACC', type: 'Country ETF' },
+            { symbol: 'BTCUSD', name: 'Bitcoin/USD', type: 'Cryptocurrency' },
+            { symbol: 'ETHUSD', name: 'Ethereum/USD', type: 'Cryptocurrency' },
+            { symbol: 'SOLUSD', name: 'Solana/USD', type: 'Cryptocurrency' },
+            { symbol: 'XRPUSD', name: 'Ripple/USD', type: 'Cryptocurrency' },
+            { symbol: 'SSLV', name: 'Invesco Physical Silver ETC', type: 'Precious Metals ETC' },
+            { symbol: 'SGLP', name: 'Invesco Physical Gold ETC', type: 'Precious Metals ETC' },
+            { symbol: 'GBPUSD', name: 'British Pound/USD', type: 'Forex Pair' },
+            { symbol: 'USDINR', name: 'US Dollar/Indian Rupee', type: 'Forex Pair' },
+            { symbol: 'VDWXEIA', name: 'Vanguard FTSE Developed World ex-UK Index Fund', type: 'Index Fund' },
+            { symbol: 'VUSEIDA', name: 'Vanguard US Equity Index Fund', type: 'Index Fund' },
+            { symbol: 'RLOGESP', name: 'Royal London Global Equity Select Pension Fund', type: 'Pension Fund' },
+            { symbol: 'VUSA', name: 'Vanguard S&P 500 UCITS ETF', type: 'S&P 500 ETF' },
+            { symbol: 'IJPN', name: 'iShares Japan Equity Index Fund', type: 'Japan Index Fund' }
+        ];
+
+        let portfolioData = investments.map(inv => ({
+            ...inv,
+            currentPrice: 0,
+            ma50: 0,
+            position: 'unknown',
+            distance: 0,
+            lastAlert: 'None'
+        }));
+
+        let alerts = [];
+        let isChecking = false;
+
+        function showMessage(message, type = 'success') {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => {
+                messagesDiv.innerHTML = '';
+            }, 8000);
+        }
+
+        function renderPortfolio() {
+            const tbody = document.getElementById('portfolio-table');
+            tbody.innerHTML = portfolioData.map((inv, index) => {
+                const price = inv.currentPrice || 0;
+                const ma50 = inv.ma50 || 0;
+                const position = inv.position || 'unknown';
+                const distance = inv.distance || 0;
+
+                let positionText = '⚪ Not checked';
+                let positionClass = 'unknown';
+                if (position === 'above') {
+                    positionText = '🟢 Above MA';
+                    positionClass = 'above';
+                } else if (position === 'below') {
+                    positionText = '🔴 Below MA';  
+                    positionClass = 'below';
+                }
+
+                return `
+                    <tr>
+                        <td><strong>${index + 1}. ${inv.symbol}</strong></td>
+                        <td>${inv.name}</td>
+                        <td>${inv.type}</td>
+                        <td>${price > 0 ? '$' + price.toFixed(2) : 'Not checked'}</td>
+                        <td>${ma50 > 0 ? '$' + ma50.toFixed(2) : 'Not checked'}</td>
+                        <td><span class="${positionClass}">${positionText}</span></td>
+                        <td>${distance !== 0 ? (distance > 0 ? '+' : '') + distance.toFixed(2) + '%' : '0.00%'}</td>
+                        <td>${inv.lastAlert}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Update stats
+            const aboveCount = portfolioData.filter(inv => inv.position === 'above').length;
+            const belowCount = portfolioData.filter(inv => inv.position === 'below').length;
+            document.getElementById('above-ma').textContent = aboveCount;
+            document.getElementById('below-ma').textContent = belowCount;
+        }
+
+        function renderAlerts() {
+            const alertsList = document.getElementById('alerts-list');
+            if (alerts.length === 0) {
+                alertsList.innerHTML = `
+                    <div style="text-align: center; padding: 30px; color: #666; font-size: 1.1em;">
+                        📊 No crossover alerts yet.<br>
+                        Click "Check All My Investments" to start monitoring for 50-day moving average crossovers!
+                    </div>
+                `;
+            } else {
+                alertsList.innerHTML = alerts.slice(0, 10).map(alert => `
+                    <div class="alert-item ${alert.type}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <strong>${alert.symbol}</strong>
+                            <span style="font-size: 0.9em; color: #666;">${alert.date} ${alert.time}</span>
+                        </div>
+                        <div>${alert.message}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function fetchStockData(symbol, type) {
+            try {
+                let url, functionType;
+                
+                // Handle different asset types with proper API functions
+                if (type.toLowerCase().includes('crypto')) {
+                    functionType = 'DIGITAL_CURRENCY_DAILY';
+                    const crypto = symbol.replace('USD', '');
+                    url = `https://www.alphavantage.co/query?function=${functionType}&symbol=${crypto}&market=USD&apikey=${API_KEY}`;
+                } else if (type.toLowerCase().includes('forex')) {
+                    functionType = 'FX_DAILY';
+                    const from = symbol.substring(0, 3);
+                    const to = symbol.substring(3);
+                    url = `https://www.alphavantage.co/query?function=${functionType}&from_symbol=${from}&to_symbol=${to}&apikey=${API_KEY}`;
+                } else {
+                    functionType = 'TIME_SERIES_DAILY_ADJUSTED';
+                    url = `https://www.alphavantage.co/query?function=${functionType}&symbol=${symbol}&apikey=${API_KEY}`;
+                }
+
+                console.log(`Fetching ${symbol} using ${functionType}...`);
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data['Error Message']) {
+                    throw new Error(`API Error: ${data['Error Message']}`);
+                }
+                
+                if (data['Note']) {
+                    throw new Error('API rate limit reached');
+                }
+
+                // Parse the time series data based on function type
+                let timeSeries;
+                if (functionType === 'DIGITAL_CURRENCY_DAILY') {
+                    timeSeries = data['Time Series (Digital Currency Daily)'];
+                } else if (functionType === 'FX_DAILY') {
+                    timeSeries = data['Time Series FX (Daily)'];
+                } else {
+                    timeSeries = data['Time Series (Daily)'];
+                }
+
+                if (!timeSeries) {
+                    throw new Error('No time series data available');
+                }
+
+                const dates = Object.keys(timeSeries).sort().reverse();
+                if (dates.length < 50) {
+                    throw new Error(`Only ${dates.length} days of data (need 50 for MA)`);
+                }
+
+                // Extract closing prices for the last 50 days
+                const prices = dates.slice(0, 50).map(date => {
+                    const dayData = timeSeries[date];
+                    if (functionType === 'DIGITAL_CURRENCY_DAILY') {
+                        return parseFloat(dayData['4a. close (USD)']);
+                    } else {
+                        return parseFloat(dayData['4. close']);
+                    }
+                });
+
+                const currentPrice = prices[0];
+                const ma50 = prices.reduce((sum, price) => sum + price, 0) / 50;
+                const position = currentPrice > ma50 ? 'above' : 'below';
+                const distance = ((currentPrice - ma50) / ma50) * 100;
+
+                return {
+                    currentPrice,
+                    ma50,
+                    position,
+                    distance,
+                    success: true
+                };
+
+            } catch (error) {
+                console.error(`Error fetching ${symbol}:`, error.message);
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        async function checkAllInvestments() {
+            if (isChecking) {
+                showMessage('Portfolio check already in progress! Please wait...', 'error');
+                return;
+            }
+            
+            isChecking = true;
+            const btn = document.getElementById('check-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Starting portfolio check...';
+            
+            showMessage('🚀 Starting portfolio check... This will take several minutes due to API rate limits (12 seconds between each investment).', 'success');
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < portfolioData.length; i++) {
+                const investment = portfolioData[i];
+                
+                // Update button with progress
+                btn.innerHTML = `<span class="spinner"></span>Checking ${investment.symbol} (${i + 1}/${portfolioData.length})...`;
+                
+                const result = await fetchStockData(investment.symbol, investment.type);
+                
+                if (result.success) {
+                    // Store previous position for crossover detection
+                    const previousPosition = portfolioData[i].position;
+                    
+                    // Update investment data
+                    portfolioData[i] = {
+                        ...investment,
+                        currentPrice: result.currentPrice,
+                        ma50: result.ma50,
+                        position: result.position,
+                        distance: result.distance,
+                        lastAlert: portfolioData[i].lastAlert
+                    };
+                    
+                    // Check for crossover alerts (only if we had a previous position)
+                    if (previousPosition !== 'unknown' && previousPosition !== result.position) {
+                        const alertType = result.position === 'above' ? 'bullish' : 'bearish';
+                        const alertMessage = result.position === 'above' 
+                            ? `🟢 Bullish crossover! Price ($${result.currentPrice.toFixed(2)}) crossed above 50-day MA ($${result.ma50.toFixed(2)})`
+                            : `🔴 Bearish crossover! Price ($${result.currentPrice.toFixed(2)}) crossed below 50-day MA ($${result.ma50.toFixed(2)})`;
+                        
+                        alerts.unshift({
+                            symbol: investment.symbol,
+                            type: alertType,
+                            message: alertMessage,
+                            date: new Date().toISOString().split('T')[0],
+                            time: new Date().toTimeString().split(' ')[0],
+                            timestamp: Date.now()
+                        });
+                        
+                        portfolioData[i].lastAlert = new Date().toISOString().split('T')[0];
+                        
+                        // Show browser notification if available
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            new Notification(`${investment.symbol} MA Crossover!`, {
+                                body: alertMessage,
+                                icon: '📊'
+                            });
+                        }
+                    }
+                    
+                    successCount++;
+                } else {
+                    console.error(`Failed to fetch data for ${investment.symbol}: ${result.error}`);
+                    errorCount++;
+                }
+
+                // Update the display after each investment
+                renderPortfolio();
+                renderAlerts();
+
+                // Rate limiting: wait 12 seconds between requests (Alpha Vantage free tier: 5 calls/minute)
+                if (i < portfolioData.length - 1) {
+                    for (let countdown = 12; countdown > 0; countdown--) {
+                        btn.innerHTML = `<span class="spinner"></span>Next check in ${countdown}s... (${i + 1}/${portfolioData.length} done)`;
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            }
+
+            // Reset button and show final results
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Check All My Investments';
+            isChecking = false;
+            
+            const resultMessage = `✅ Portfolio check complete! Successfully checked ${successCount} investments.${errorCount > 0 ? ` ${errorCount} failed due to API limitations.` : ''} ${alerts.length > 0 ? ` Found ${alerts.length} new crossover alerts!` : ''}`;
+            showMessage(resultMessage, successCount > 0 ? 'success' : 'error');
+
+            // Request notification permission if crossovers were found
+            if (alerts.length > 0 && 'Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        // Initialize the dashboard when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            renderPortfolio();
+            renderAlerts();
+            showMessage('🎯 Dashboard loaded successfully! Your 21 investments are ready to check. Click the button above to start monitoring MA crossovers.', 'success');
+            
+            console.log('📊 21-Investment Portfolio Dashboard Loaded!');
+            console.log('🔑 API Key configured:', API_KEY.substring(0, 6) + '...');
+            console.log('📈 Ready to monitor:', portfolioData.map(inv => inv.symbol).join(', '));
+        });
+    </script>
+</body>
+</html>
