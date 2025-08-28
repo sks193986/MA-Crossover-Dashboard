@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My 17 Investment Portfolio Dashboard</title>
+    <title>My 21 Investment Portfolio Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="dashboard-container">
         <!-- Header -->
         <header class="dashboard-header">
-            <h1>📊 My Investment Portfolio</h1>
+            <h1>📊 My 21 Investment Portfolio</h1>
             <div class="header-info">
                 <div class="portfolio-summary">
                     <span class="summary-item">
-                        <span class="summary-number" id="total-investments">17</span>
+                        <span class="summary-number" id="total-investments">21</span>
                         <span class="summary-label">Investments</span>
                     </span>
                     <span class="summary-item success">
@@ -30,12 +30,12 @@
             </div>
         </header>
 
-        <!-- API Status & Quick Start -->
+        <!-- Status Panel -->
         <div class="status-panel">
             <div class="status-info">
                 <div class="status-item">
                     <span class="status-icon">✅</span>
-                    <span class="status-text">API Connected - Ready to monitor your 17 investments</span>
+                    <span class="status-text">API Connected - Ready to monitor your 21 investments</span>
                 </div>
                 <div class="status-item">
                     <span class="status-icon">🎯</span>
@@ -45,23 +45,16 @@
             <button class="btn-main" onclick="checkAllInvestments()">🔄 Check All My Investments</button>
         </div>
 
-        <!-- Quick Start Guide -->
-        <div class="guide-panel">
-            <h3>🚀 Your Portfolio is Pre-loaded and Ready!</h3>
-            <p><strong>Your 17 investments are already added:</strong> VOO, VEA, VTI, EWJ, VWO, HMEM, RIO, LCCN, BTCUSD, ETHUSD, SOLUSD, XRPUSD, SSLV, SGLP, GBPUSD, GBPINR, USDINR</p>
-            <p><strong>Next step:</strong> Click "Check All My Investments" above to get current prices and start monitoring for 50-day MA crossovers!</p>
-        </div>
-
-        <!-- Investment Portfolio Table -->
+        <!-- Portfolio Section -->
         <section class="portfolio-section">
             <div class="section-header">
-                <h2>📈 My 17 Investment Portfolio</h2>
+                <h2>📈 My 21 Investment Portfolio</h2>
                 <div class="portfolio-controls">
                     <button onclick="exportData()" class="btn-secondary">📊 Export Data</button>
                     <button onclick="refreshDisplay()" class="btn-secondary">🔄 Refresh Display</button>
                 </div>
             </div>
-
+            
             <div class="portfolio-table-container">
                 <table class="portfolio-table">
                     <thead>
@@ -79,7 +72,7 @@
                     <tbody id="portfolio-tbody">
                         <tr>
                             <td colspan="8" style="text-align: center; padding: 40px; opacity: 0.7;">
-                                <div style="font-size: 1.1em; margin-bottom: 10px;">📊 Your 17 investments are loaded!</div>
+                                <div style="font-size: 1.1em; margin-bottom: 10px;">📊 Your 21 investments are loaded!</div>
                                 <div>Click "Check All My Investments" above to get current prices and MA data</div>
                             </td>
                         </tr>
@@ -88,7 +81,7 @@
             </div>
         </section>
 
-        <!-- MA Crossover Alerts -->
+        <!-- Alerts Section -->
         <section class="alerts-section">
             <h2>🚨 50-Day MA Crossover Alerts</h2>
             <div class="alerts-filters">
@@ -114,10 +107,10 @@
                     <div class="connection-status">
                         <div class="status-good">Connected to Alpha Vantage</div>
                         <div class="api-key-display">API Key: KKV2RG...LLW1</div>
-                        <small>You have 500 free API requests per day. Checking 17 investments twice daily uses about 34 requests.</small>
+                        <small>You have 500 free API requests per day. Checking 21 investments twice daily uses about 42 requests.</small>
                     </div>
                 </div>
-
+                
                 <div class="setting-group">
                     <h4>📅 Monitoring Schedule</h4>
                     <select id="monitoring-frequency">
@@ -125,25 +118,13 @@
                         <option value="daily">Once Daily - Market Close Only</option>
                         <option value="manual">Manual Only - No Automatic Checking</option>
                     </select>
-                    <small>Twice-daily monitoring catches all important MA crossovers while staying within free API limits.</small>
                 </div>
 
                 <div class="setting-group">
                     <h4>🔔 Alert Settings</h4>
                     <div class="checkbox-group">
-                        <label><input type="checkbox" id="browser-alerts" checked> Browser Notifications for MA Crossovers</label>
+                        <label><input type="checkbox" id="browser-alerts" checked> Browser Notifications</label>
                         <label><input type="checkbox" id="sound-alerts"> Sound Alerts (Coming Soon)</label>
-                        <label><input type="checkbox" id="email-alerts"> Email Alerts (Coming Soon)</label>
-                    </div>
-                </div>
-
-                <div class="setting-group">
-                    <h4>📊 Your Investment Portfolio</h4>
-                    <div class="portfolio-breakdown">
-                        <div class="breakdown-item">🏢 <strong>ETFs:</strong> VOO, VEA, VTI, EWJ, VWO, HMEM, SSLV (7 investments)</div>
-                        <div class="breakdown-item">📈 <strong>Stocks:</strong> RIO, LCCN, SGLP (3 investments)</div>
-                        <div class="breakdown-item">₿ <strong>Crypto:</strong> BTCUSD, ETHUSD, SOLUSD, XRPUSD (4 investments)</div>
-                        <div class="breakdown-item">💱 <strong>Forex:</strong> GBPUSD, GBPINR, USDINR (3 investments)</div>
                     </div>
                 </div>
             </div>
