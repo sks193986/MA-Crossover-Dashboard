@@ -1,6 +1,8 @@
-// YOUR PERSONALIZED 17-INVESTMENT PORTFOLIO DASHBOARD
+// YOUR ULTIMATE 21-INVESTMENT PORTFOLIO DASHBOARD
 // ✅ API Key: KKV2RG3N00OPLLW1
-// 📊 Pre-loaded with your exact 17 investments!
+// 🔧 HMEM → HMEF (corrected ticker)
+// ❌ GBPINR removed as requested  
+// 🆕 5 new index funds added!
 
 const API_KEY = 'KKV2RG3N00OPLLW1';
 
@@ -13,25 +15,29 @@ let portfolioSettings = {
     usedRequests: 0
 };
 
-// YOUR EXACT 17 INVESTMENTS - PRE-LOADED AND READY!
+// YOUR ULTIMATE 21 INVESTMENTS - FULLY OPTIMIZED!
 let watchlistData = [
     {symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'Large Cap ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'VEA', name: 'Vanguard Developed Markets ETF', type: 'International ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', type: 'Broad Market ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'EWJ', name: 'iShares MSCI Japan ETF', type: 'Country ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'VWO', name: 'Vanguard Emerging Markets ETF', type: 'Emerging Markets ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
-    {symbol: 'HMEM', name: 'Harbor Emerging Markets ETF', type: 'Emerging Markets ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
-    {symbol: 'RIO', name: 'Rio Tinto Group', type: 'Mining Stock', currentPrice: 0, ma50: 0, position: 'unknown'},
-    {symbol: 'LCCN', name: 'Lattice Semiconductor Corporation', type: 'Semiconductor Stock', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'HMEF', name: 'HSBC MSCI Emerging Markets UCITS ETF', type: 'Emerging Markets ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'RIO', name: 'Amundi MSCI Brazil ETF ACC', type: 'Country ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'LCCN', name: 'Amundi MSCI China ETF ACC', type: 'Country ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'BTCUSD', name: 'Bitcoin/USD', type: 'Cryptocurrency', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'ETHUSD', name: 'Ethereum/USD', type: 'Cryptocurrency', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'SOLUSD', name: 'Solana/USD', type: 'Cryptocurrency', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'XRPUSD', name: 'Ripple/USD', type: 'Cryptocurrency', currentPrice: 0, ma50: 0, position: 'unknown'},
-    {symbol: 'SSLV', name: 'SolidX Silver Shares', type: 'Precious Metals ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
-    {symbol: 'SGLP', name: 'Singapore LNG Corp', type: 'Energy Stock', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'SSLV', name: 'Invesco Physical Silver ETC', type: 'Precious Metals ETC', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'SGLP', name: 'Invesco Physical Gold ETC', type: 'Precious Metals ETC', currentPrice: 0, ma50: 0, position: 'unknown'},
     {symbol: 'GBPUSD', name: 'British Pound/USD', type: 'Forex Pair', currentPrice: 0, ma50: 0, position: 'unknown'},
-    {symbol: 'GBPINR', name: 'British Pound/Indian Rupee', type: 'Forex Pair', currentPrice: 0, ma50: 0, position: 'unknown'},
-    {symbol: 'USDINR', name: 'US Dollar/Indian Rupee', type: 'Forex Pair', currentPrice: 0, ma50: 0, position: 'unknown'}
+    {symbol: 'USDINR', name: 'US Dollar/Indian Rupee', type: 'Forex Pair', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'VDWXEIA', name: 'Vanguard FTSE Developed World ex-UK Equity Index Fund GBP Acc', type: 'Index Fund', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'VUSEIDA', name: 'Vanguard US Equity Index Fund GBP Acc', type: 'Index Fund', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'RLOGESP', name: 'Royal London Global Equity Select Pension Fund', type: 'Pension Fund', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'VUSA', name: 'Vanguard S&P 500 UCITS ETF', type: 'S&P 500 ETF', currentPrice: 0, ma50: 0, position: 'unknown'},
+    {symbol: 'IJPN', name: 'iShares Japan Equity Index Fund (UK) D Acc', type: 'Japan Index Fund', currentPrice: 0, ma50: 0, position: 'unknown'}
 ];
 
 let alertsData = [];
@@ -40,9 +46,10 @@ let isChecking = false;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Your 17-Investment Portfolio Dashboard Loading...');
+    console.log('🚀 Your ULTIMATE 21-Investment Portfolio Dashboard Loading...');
     console.log(`✅ API Key Connected: ${API_KEY.substring(0, 6)}...`);
-    console.log('📊 Your investments:', watchlistData.map(inv => inv.symbol).join(', '));
+    console.log('📊 Your 21 investments:', watchlistData.map(inv => inv.symbol).join(', '));
+    console.log('🔧 Corrections: HMEM → HMEF | ❌ Removed: GBPINR | 🆕 Added: 5 Index Funds');
 
     loadSettings();
     loadSavedData();
@@ -53,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Request notification permission
     setTimeout(requestNotificationPermission, 1000);
 
-    console.log('✅ Dashboard Ready! Click "Check All My Investments" to get started!');
+    console.log('✅ Dashboard Ready! Click "Check All My Investments" to monitor 21 investments!');
 });
 
 // Load settings
@@ -95,7 +102,7 @@ function loadSavedData() {
     if (savedWatchlist) {
         try {
             const saved = JSON.parse(savedWatchlist);
-            // Merge saved data with current prices, but keep our 17 investments
+            // Merge saved data with current prices, but keep our 21 investments
             watchlistData.forEach((investment, index) => {
                 const savedInvestment = saved.find(s => s.symbol === investment.symbol);
                 if (savedInvestment) {
@@ -149,13 +156,22 @@ function renderPortfolio() {
             positionText = '🔴 Below MA';
         }
 
+        // Add emoji for investment type
+        let typeEmoji = '';
+        if (investment.type.includes('Index Fund')) typeEmoji = '📊';
+        else if (investment.type.includes('ETF')) typeEmoji = '🏢';
+        else if (investment.type.includes('Crypto')) typeEmoji = '₿';
+        else if (investment.type.includes('Forex')) typeEmoji = '💱';
+        else if (investment.type.includes('Precious Metals')) typeEmoji = '🥇';
+        else if (investment.type.includes('Pension')) typeEmoji = '🏦';
+
         return `
             <tr>
                 <td><strong>${index + 1}. ${investment.symbol}</strong></td>
-                <td>${investment.name}</td>
+                <td>${typeEmoji} ${investment.name}</td>
                 <td>${investment.type}</td>
-                <td>${price > 0 ? (investment.type.includes('USD') ? '$' : '') + price.toFixed(investment.type.includes('Crypto') ? 0 : 2) : 'Not checked'}</td>
-                <td>${ma50 > 0 ? (investment.type.includes('USD') ? '$' : '') + ma50.toFixed(investment.type.includes('Crypto') ? 0 : 2) : 'Not checked'}</td>
+                <td>${price > 0 ? (investment.type.includes('USD') ? '$' : '£') + price.toFixed(investment.type.includes('Crypto') ? 0 : 2) : 'Not checked'}</td>
+                <td>${ma50 > 0 ? (investment.type.includes('USD') ? '$' : '£') + ma50.toFixed(investment.type.includes('Crypto') ? 0 : 2) : 'Not checked'}</td>
                 <td><span class="${positionClass}">${positionText}</span></td>
                 <td>${distance > 0 ? '+' : ''}${distance}%</td>
                 <td>${lastAlert}</td>
@@ -175,7 +191,7 @@ function renderAlerts(filteredAlerts = null) {
         alertsList.innerHTML = `
             <div style="text-align: center; opacity: 0.6; padding: 30px;">
                 <div style="font-size: 1.1em; margin-bottom: 8px;">No MA crossover alerts yet</div>
-                <div>Check your portfolio to start monitoring for 50-day moving average crossovers!</div>
+                <div>Check your 21-investment portfolio to start monitoring for 50-day moving average crossovers!</div>
             </div>
         `;
         return;
@@ -213,7 +229,7 @@ function updateAPIUsage() {
     }
 }
 
-// Main function: Check all 17 investments
+// Main function: Check all 21 investments
 async function checkAllInvestments() {
     if (isChecking) {
         showMessage('Portfolio check already in progress. Please wait...', 'warning');
@@ -230,14 +246,14 @@ async function checkAllInvestments() {
     }
 
     if (investmentsToCheck < watchlistData.length) {
-        const proceed = confirm(`⚠️ API Limit Warning!\n\nYou can check ${investmentsToCheck} of your 17 investments today.\n\nProceed with checking ${investmentsToCheck} investments?`);
+        const proceed = confirm(`⚠️ API Limit Warning!\n\nYou can check ${investmentsToCheck} of your 21 investments today.\n\nProceed with checking ${investmentsToCheck} investments?`);
         if (!proceed) return;
     }
 
     isChecking = true;
     const checkButton = document.querySelector('.btn-main');
     const originalText = checkButton.innerHTML;
-    checkButton.innerHTML = '<span class="spinner"></span>Checking Your Portfolio...';
+    checkButton.innerHTML = '<span class="spinner"></span>Checking Your 21 Investments...';
     checkButton.disabled = true;
 
     let checkedCount = 0;
@@ -245,7 +261,7 @@ async function checkAllInvestments() {
     let crossoverCount = 0;
 
     try {
-        showMessage(`📊 Checking ${investmentsToCheck} of your 17 investments... This will take several minutes due to API rate limits.`, 'success');
+        showMessage(`📊 Checking ${investmentsToCheck} of your 21 investments... This will take several minutes due to API rate limits.`, 'success');
 
         // Process investments with proper rate limiting
         for (let i = 0; i < investmentsToCheck; i++) {
@@ -513,20 +529,20 @@ function exportData() {
             alerts: alertsData,
             settings: portfolioSettings,
             exportDate: new Date().toISOString(),
-            totalInvestments: 17
+            totalInvestments: 21
         };
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `my-17-investments-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `my-21-investments-${new Date().toISOString().split('T')[0]}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showMessage('📊 Your 17-investment portfolio data exported successfully!', 'success');
+        showMessage('📊 Your 21-investment portfolio data exported successfully!', 'success');
     } catch (error) {
         console.error('Export error:', error);
         showMessage('❌ Error exporting data', 'error');
@@ -551,7 +567,7 @@ function requestNotificationPermission() {
 }
 
 function testAlert() {
-    const testMessage = 'This is how you will receive MA crossover alerts for your 17 investments!';
+    const testMessage = 'This is how you will receive MA crossover alerts for your 21 investments!';
     showNotification('📊 Test Alert', testMessage);
 
     // Add a test alert to the display
@@ -632,7 +648,8 @@ function showMessage(message, type = 'success') {
 // Auto-save data every 2 minutes
 setInterval(saveData, 120000);
 
-console.log('🚀 Your 17-Investment Portfolio Dashboard is Ready!');
+console.log('🚀 Your ULTIMATE 21-Investment Portfolio Dashboard is Ready!');
 console.log('✅ API Key Configured:', API_KEY.substring(0, 8) + '...');
-console.log('📊 Your 17 investments loaded and ready to monitor!');
-console.log('💡 Click "Check All My Investments" to get current data and start monitoring!');
+console.log('📊 Your 21 investments loaded - including 5 new index funds!');
+console.log('🔧 Fixed: HMEM → HMEF | ❌ Removed: GBPINR | 🆕 Added: 5 Index Funds');
+console.log('💡 Click "Check All My Investments" to start monitoring your expanded portfolio!');
