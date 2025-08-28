@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Investment Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .stats { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; }
+        .stat { background: #f0f0f0; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 2em; font-weight: bold; color: #007bff; }
+        .check-btn { 
+            display: block; margin: 20px auto; padding: 15px 30px; 
+            background: #28a745; color: white; border: none; border-radius: 8px; 
+            font-size: 1.1em; cursor: pointer; 
+        }
+        .check-btn:disabled { background: #6c757d; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #f8f9fa; }
+        .above { color: #28a745; font-weight: bold; }
+        .below { color: #dc3545; font-weight: bold; }
+        .unknown { color: #6c757d; }
+        .message { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Simple Investment Dashboard</h1>
+    </div>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-number" id="total">8</div>
+            <div>Total Investments</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number" id="above">0</div>
+            <div>Above MA</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number" id="below">0</div>
+            <div>Below MA</div>
+        </div>
+    </div>
+
+    <button class="check-btn" onclick="startCheck()" id="checkBtn">
+        🔄 Check Investments
+    </button>
+
+    <div id="messages"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Name</th>
+                <th>Current Price</th>
+                <th>50-day MA</th>
+                <th>Position</th>
+                <th>Distance %</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+
+    <script>
+        const API_KEY = 'KKV2RG3N00OPLLW1';
+
+        // SIMPLE LIST - Only symbols that definitely work
+        const investments = [
+            { symbol: 'VOO', name: 'Vanguard S&P 500 ETF' },
+            { symbol: 'VTI', name: 'Vanguard Total Stock Market ETF' },
+            { symbol: 'VEA', name: 'Vanguard Developed Markets ETF' },
+            { symbol: 'EWJ', name: 'iShares MSCI Japan ETF' },
+            { symbol: 'VWO', name: 'Vanguard Emerging Markets ETF' },
+            { symbol: 'SLV', name: 'iShares Silver Trust ETF' },
+            { symbol: 'GLD', name: 'SPDR Gold Trust ETF' },
+            { symbol: 'AAPL', name: 'Apple Inc.' }
+        ];
+
+        let portfolio = investments.map(inv => ({
+            ...inv,
+            price: 0,
+            ma50: 0,
+            position: 'unknown',
+            distance: 0
+        }));
+
+        let isChecking = false;
+
+        function showMessage(text, type = 'success') {
+            document.getElementById('messages').innerHTML = 
+                `<div class="message ${type}">${text}</div>`;
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = portfolio.map(inv => `
+                <tr>
+                    <td><strong>${inv.symbol}</strong></td>
+                    <td>${inv.name}</td>
+                    <td>${inv.price > 0 ? '$' + inv.price.toFixed(2) : 'Not checked'}</td>
+                    <td>${inv.ma50 > 0 ? '$' + inv.ma50.toFixed(2) : 'Not checked'}</td>
+                    <td><span class="${inv.position}">
+                        ${inv.position === 'above' ? '🟢 Above' : 
+                          inv.position === 'below' ? '🔴 Below' : '⚪ Unknown'}
+                    </span></td>
+                    <td>${inv.distance.toFixed(2)}%</td>
+                </tr>
+            `).join('');
+
+            // Update stats
+            const above = portfolio.filter(inv => inv.position === 'above').length;
+            const below = portfolio.filter(inv => inv.position === 'below').length;
+            document.getElementById('above').textContent = above;
+            document.getElementById('below').textContent = below;
+        }
+
+        async function checkInvestment(investment) {
+            try {
+                showMessage(`Checking ${investment.symbol}...`);
+
+                // SIMPLE API CALL - Only TIME_SERIES_DAILY
+                const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${investment.symbol}&apikey=${API_KEY}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data['Error Message']) {
+                    throw new Error(data['Error Message']);
+                }
+
+                if (data['Note']) {
+                    throw new Error('API limit reached');
+                }
+
+                const timeSeries = data['Time Series (Daily)'];
+                if (!timeSeries) {
+                    throw new Error('No data available');
+                }
+
+                // Get last 50 days
+                const dates = Object.keys(timeSeries).sort().reverse().slice(0, 50);
+                if (dates.length < 50) {
+                    throw new Error('Not enough data for MA calculation');
+                }
+
+                const prices = dates.map(date => parseFloat(timeSeries[date]['4. close']));
+                const currentPrice = prices[0];
+                const ma50 = prices.reduce((sum, price) => sum + price) / prices.length;
+
+                // Update investment
+                investment.price = currentPrice;
+                investment.ma50 = ma50;
+                investment.position = currentPrice > ma50 ? 'above' : 'below';
+                investment.distance = ((currentPrice - ma50) / ma50) * 100;
+
+                showMessage(`✅ ${investment.symbol}: $${currentPrice.toFixed(2)} vs MA $${ma50.toFixed(2)}`, 'success');
+                return true;
+
+            } catch (error) {
+                showMessage(`❌ ${investment.symbol}: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function startCheck() {
+            if (isChecking) return;
+
+            isChecking = true;
+            const btn = document.getElementById('checkBtn');
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+
+            let successCount = 0;
+
+            for (let i = 0; i < portfolio.length; i++) {
+                const success = await checkInvestment(portfolio[i]);
+                if (success) successCount++;
+
+                updateTable();
+
+                // Wait 12 seconds between calls
+                if (i < portfolio.length - 1) {
+                    for (let countdown = 12; countdown > 0; countdown--) {
+                        btn.textContent = `Next in ${countdown}s...`;
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🔄 Check Investments';
+            isChecking = false;
+
+            showMessage(`Completed! ${successCount}/${portfolio.length} investments updated.`, 
+                       successCount > 0 ? 'success' : 'error');
+        }
+
+        // Initialize
+        updateTable();
+        showMessage('Dashboard loaded. Click "Check Investments" to start.');
+    </script>
+</body>
+</html>
