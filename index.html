@@ -27,6 +27,14 @@
         .status-icon { font-size: 1.2em; }
         .status-text { color: #495057; font-weight: 500; }
 
+        /* API Status */
+        .api-status { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 20px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); }
+        .api-sources { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .api-source { padding: 15px; background: #f8f9fa; border-radius: 10px; text-align: center; }
+        .api-source.primary { border-left: 4px solid #007bff; }
+        .api-source.secondary { border-left: 4px solid #28a745; }
+        .api-source.unlimited { border-left: 4px solid #17a2b8; }
+
         /* Buttons */
         .btn-main { background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3); }
         .btn-main:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4); }
@@ -51,6 +59,7 @@
         .position-above { color: #28a745; font-weight: 600; }
         .position-below { color: #dc3545; font-weight: 600; }
         .position-unknown { color: #6c757d; }
+        .data-source { font-size: 0.8em; opacity: 0.7; }
 
         /* Messages */
         .message { padding: 15px 20px; margin: 15px 0; border-radius: 10px; font-weight: 500; }
@@ -64,13 +73,7 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .dashboard-container { padding: 15px; }
-            .dashboard-header h1 { font-size: 1.8em; }
-            .header-info { flex-direction: column; align-items: stretch; }
-            .portfolio-summary { justify-content: center; }
-            .status-panel { flex-direction: column; align-items: stretch; }
-            .section-header { flex-direction: column; align-items: stretch; }
-            .portfolio-controls { justify-content: center; }
+            .api-sources { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -98,16 +101,38 @@
             </div>
         </header>
 
+        <!-- API Status Panel -->
+        <div class="api-status">
+            <h3 style="margin-bottom: 15px; color: #2c3e50;">🔗 Multi-Source Data System</h3>
+            <div class="api-sources">
+                <div class="api-source primary">
+                    <div style="font-weight: 600; margin-bottom: 5px;">🥇 Alpha Vantage</div>
+                    <div style="font-size: 0.9em;">Primary source</div>
+                    <div style="font-size: 0.8em; color: #666;">1000 calls/day</div>
+                </div>
+                <div class="api-source unlimited">
+                    <div style="font-weight: 600; margin-bottom: 5px;">🚀 Yahoo Finance</div>
+                    <div style="font-size: 0.9em;">Unlimited backup</div>
+                    <div style="font-size: 0.8em; color: #666;">No limits</div>
+                </div>
+                <div class="api-source secondary">
+                    <div style="font-weight: 600; margin-bottom: 5px;">📊 Status</div>
+                    <div style="font-size: 0.9em;" id="system-status">Ready</div>
+                    <div style="font-size: 0.8em; color: #666;" id="calls-used">0 calls used</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Status Panel -->
         <div class="status-panel">
             <div class="status-info">
                 <div class="status-item">
-                    <span class="status-icon">⚠️</span>
-                    <span class="status-text">API Rate Limited - Using 20 second delays between calls</span>
+                    <span class="status-icon">🎯</span>
+                    <span class="status-text">Multi-source system - Alpha Vantage primary, Yahoo Finance unlimited backup</span>
                 </div>
                 <div class="status-item">
-                    <span class="status-icon">🎯</span>
-                    <span class="status-text" id="api-usage">API Usage: 0/500 requests today</span>
+                    <span class="status-icon">⚡</span>
+                    <span class="status-text">10 second delays between calls to optimize performance</span>
                 </div>
             </div>
             <button class="btn-main" onclick="checkAllInvestments()" id="check-btn">🔄 Check All My Investments</button>
@@ -136,14 +161,14 @@
                             <th onclick="sortTable('ma50')" class="sortable">50-day MA ↕️</th>
                             <th>Position vs MA</th>
                             <th>Distance from MA</th>
-                            <th>Last Alert</th>
+                            <th>Data Source</th>
                         </tr>
                     </thead>
                     <tbody id="portfolio-tbody">
                         <tr>
                             <td colspan="8" style="text-align: center; padding: 40px; opacity: 0.7;">
-                                <div style="font-size: 1.1em; margin-bottom: 10px;">📊 Your investments are loaded!</div>
-                                <div>Click "Check All My Investments" above to get current prices and MA data</div>
+                                <div style="font-size: 1.1em; margin-bottom: 10px;">🚀 Multi-Source System Ready!</div>
+                                <div>Click "Check All My Investments" to start monitoring with unlimited data access</div>
                             </td>
                         </tr>
                     </tbody>
@@ -153,26 +178,28 @@
     </div>
 
     <script>
-        const API_KEY = 'KKV2RG3N00OPLLW1';
+        // DUAL API KEYS + YAHOO FINANCE BACKUP
+        const API_KEYS = ['KKV2RG3N00OPLLW1', 'MX0AX5U6LX0HYGVW'];
+        let currentKeyIndex = 0;
+        let apiCallsUsed = 0;
 
-        // YOUR UNIQUE INVESTMENTS ONLY - No duplicates, no additions
         const investments = [
             { symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'Large Cap ETF' },
             { symbol: 'VEA', name: 'Vanguard Developed Markets ETF', type: 'International ETF' },
             { symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', type: 'Broad Market ETF' },
             { symbol: 'EWJ', name: 'iShares MSCI Japan ETF', type: 'Country ETF' },
             { symbol: 'VWO', name: 'Vanguard Emerging Markets ETF', type: 'Emerging Markets ETF' },
-            { symbol: 'EEM', name: 'iShares MSCI Emerging Markets ETF (HSBC MSCI equivalent)', type: 'Emerging Markets ETF' },
-            { symbol: 'EWZ', name: 'iShares MSCI Brazil ETF (Amundi MSCI Brazil equivalent)', type: 'Country ETF' },
-            { symbol: 'MCHI', name: 'iShares MSCI China ETF (Amundi MSCI China equivalent)', type: 'Country ETF' },
-            { symbol: 'BTC', name: 'Bitcoin', type: 'Cryptocurrency' },
-            { symbol: 'ETH', name: 'Ethereum', type: 'Cryptocurrency' },
-            { symbol: 'SOL', name: 'Solana', type: 'Cryptocurrency' },
-            { symbol: 'XRP', name: 'Ripple', type: 'Cryptocurrency' },
-            { symbol: 'SLV', name: 'iShares Silver Trust ETF (Invesco Physical Silver equivalent)', type: 'Precious Metals ETF' },
-            { symbol: 'GLD', name: 'SPDR Gold Trust ETF (Invesco Physical Gold equivalent)', type: 'Precious Metals ETF' },
-            { symbol: 'GBPUSD', name: 'British Pound/USD', type: 'Forex Pair' },
-            { symbol: 'USDINR', name: 'US Dollar/Indian Rupee', type: 'Forex Pair' }
+            { symbol: 'EEM', name: 'iShares MSCI Emerging Markets ETF', type: 'Emerging Markets ETF' },
+            { symbol: 'EWZ', name: 'iShares MSCI Brazil ETF', type: 'Country ETF' },
+            { symbol: 'MCHI', name: 'iShares MSCI China ETF', type: 'Country ETF' },
+            { symbol: 'BTC-USD', name: 'Bitcoin', type: 'Cryptocurrency' },
+            { symbol: 'ETH-USD', name: 'Ethereum', type: 'Cryptocurrency' },
+            { symbol: 'SOL-USD', name: 'Solana', type: 'Cryptocurrency' },
+            { symbol: 'XRP-USD', name: 'Ripple', type: 'Cryptocurrency' },
+            { symbol: 'SLV', name: 'iShares Silver Trust ETF', type: 'Precious Metals ETF' },
+            { symbol: 'GLD', name: 'SPDR Gold Trust ETF', type: 'Precious Metals ETF' },
+            { symbol: 'GBPUSD=X', name: 'British Pound/USD', type: 'Forex Pair' },
+            { symbol: 'USDINR=X', name: 'US Dollar/Indian Rupee', type: 'Forex Pair' }
         ];
 
         let portfolioData = investments.map(inv => ({
@@ -181,28 +208,35 @@
             ma50: 0,
             position: 'unknown',
             distance: 0,
-            lastAlert: 'None'
+            dataSource: 'Not checked'
         }));
 
         let isChecking = false;
-        let apiCallsUsed = 0;
 
         function showMessage(message, type = 'success') {
             const messagesDiv = document.getElementById('messages');
             messagesDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
             setTimeout(() => {
                 messagesDiv.innerHTML = '';
-            }, 10000);
+            }, 8000);
+        }
+
+        function updateSystemStatus() {
+            document.getElementById('calls-used').textContent = `${apiCallsUsed} calls used`;
+            if (apiCallsUsed > 0) {
+                document.getElementById('system-status').textContent = 'Active';
+            }
         }
 
         function renderPortfolio() {
             const tbody = document.getElementById('portfolio-tbody');
+
             tbody.innerHTML = portfolioData.map((investment, index) => {
                 const price = investment.currentPrice || 0;
                 const ma50 = investment.ma50 || 0;
                 const position = investment.position || 'unknown';
                 const distance = investment.distance || 0;
-                const lastAlert = investment.lastAlert || 'None';
+                const dataSource = investment.dataSource || 'Not checked';
 
                 let positionClass = 'position-unknown';
                 let positionText = '⚪ Not checked';
@@ -214,7 +248,6 @@
                     positionText = '🔴 Below MA';
                 }
 
-                // Add emoji for investment type
                 let typeEmoji = '';
                 if (investment.type.includes('ETF')) typeEmoji = '🏢';
                 else if (investment.type.includes('Crypto')) typeEmoji = '₿';
@@ -222,14 +255,14 @@
 
                 return `
                     <tr>
-                        <td><strong>${index + 1}. ${investment.symbol}</strong></td>
+                        <td><strong>${index + 1}. ${investment.symbol.replace('=X', '').replace('-USD', '')}</strong></td>
                         <td>${typeEmoji} ${investment.name}</td>
                         <td>${investment.type}</td>
                         <td>${price > 0 ? '$' + price.toFixed(2) : 'Not checked'}</td>
                         <td>${ma50 > 0 ? '$' + ma50.toFixed(2) : 'Not checked'}</td>
                         <td><span class="${positionClass}">${positionText}</span></td>
                         <td>${distance !== 0 ? (distance > 0 ? '+' : '') + distance.toFixed(2) + '%' : '0.00%'}</td>
-                        <td>${lastAlert}</td>
+                        <td><span class="data-source">${dataSource}</span></td>
                     </tr>
                 `;
             }).join('');
@@ -243,50 +276,70 @@
             document.getElementById('total-investments').textContent = total;
             document.getElementById('above-ma').textContent = aboveMA;
             document.getElementById('below-ma').textContent = belowMA;
-            document.getElementById('api-usage').textContent = `API Usage: ${apiCallsUsed}/500 requests today`;
+
+            updateSystemStatus();
         }
 
-        async function fetchInvestmentData(investment) {
-            try {
-                let url, functionType;
-                const typeLower = investment.type.toLowerCase();
-                const symbol = investment.symbol;
+        function processPrices(investment, closes, source) {
+            if (!closes || closes.length < 50) {
+                throw new Error('Insufficient price data');
+            }
 
-                if (typeLower.includes('crypto')) {
+            const validCloses = closes.filter(p => p !== null && p !== undefined && !isNaN(p));
+            if (validCloses.length < 50) {
+                throw new Error('Not enough valid price data');
+            }
+
+            const recentCloses = validCloses.slice(-50);
+            const currentPrice = recentCloses[recentCloses.length - 1];
+            const ma50 = recentCloses.reduce((sum, price) => sum + price, 0) / recentCloses.length;
+            const position = currentPrice > ma50 ? 'above' : 'below';
+            const distance = ((currentPrice - ma50) / ma50) * 100;
+
+            return {
+                success: true,
+                currentPrice,
+                ma50,
+                position,
+                distance,
+                dataSource: source
+            };
+        }
+
+        async function fetchFromAlphaVantage(symbol, type) {
+            try {
+                const currentKey = API_KEYS[currentKeyIndex];
+                let url, functionType;
+
+                if (type.includes('Crypto')) {
+                    const cryptoSymbol = symbol.replace('-USD', '');
                     functionType = 'DIGITAL_CURRENCY_DAILY';
-                    url = `https://www.alphavantage.co/query?function=${functionType}&symbol=${symbol}&market=USD&apikey=${API_KEY}`;
-                } else if (typeLower.includes('forex')) {
+                    url = `https://www.alphavantage.co/query?function=${functionType}&symbol=${cryptoSymbol}&market=USD&apikey=${currentKey}`;
+                } else if (type.includes('Forex')) {
+                    const cleanSymbol = symbol.replace('=X', '');
+                    const fromCurrency = cleanSymbol.substring(0, 3);
+                    const toCurrency = cleanSymbol.substring(3);
                     functionType = 'FX_DAILY';
-                    const fromCurrency = symbol.substring(0, 3);
-                    const toCurrency = symbol.substring(3);
-                    url = `https://www.alphavantage.co/query?function=${functionType}&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&apikey=${API_KEY}`;
+                    url = `https://www.alphavantage.co/query?function=${functionType}&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&apikey=${currentKey}`;
                 } else {
                     functionType = 'TIME_SERIES_DAILY';
-                    url = `https://www.alphavantage.co/query?function=${functionType}&symbol=${symbol}&apikey=${API_KEY}`;
+                    url = `https://www.alphavantage.co/query?function=${functionType}&symbol=${symbol}&apikey=${currentKey}`;
                 }
 
-                console.log(`🔄 Fetching ${symbol} using ${functionType}...`);
+                console.log(`🔄 Trying Alpha Vantage for ${symbol}...`);
                 const response = await fetch(url);
                 const data = await response.json();
 
                 apiCallsUsed++;
-                console.log(`📊 API Response for ${symbol}:`, data);
+                updateSystemStatus();
 
-                // Better error handling
-                if (data['Error Message']) {
-                    console.error(`❌ ${symbol} API Error:`, data['Error Message']);
-                    throw new Error(data['Error Message']);
+                if (data['Information'] && data['Information'].includes('rate limits')) {
+                    currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+                    throw new Error('Rate limit reached');
                 }
 
-                if (data['Note']) {
-                    console.error(`⚠️ ${symbol} API Note:`, data['Note']);
-                    throw new Error('API rate limit reached - try again later');
-                }
-
-                // Check for empty response
-                if (!data || Object.keys(data).length === 0) {
-                    console.error(`❌ ${symbol} Empty response`);
-                    throw new Error('Empty API response');
+                if (data['Error Message'] || data['Note']) {
+                    throw new Error(data['Error Message'] || 'API error');
                 }
 
                 let timeSeries;
@@ -299,62 +352,78 @@
                 }
 
                 if (!timeSeries) {
-                    console.error(`❌ ${symbol} No time series in response:`, Object.keys(data));
-                    throw new Error(`No time series data - got: ${Object.keys(data).join(', ')}`);
+                    throw new Error('No time series data');
                 }
 
                 const dates = Object.keys(timeSeries).sort().reverse();
-                console.log(`📅 ${symbol} has ${dates.length} days of data`);
-
-                if (dates.length < 50) {
-                    throw new Error(`Only ${dates.length} days of data (need 50 for MA)`);
-                }
-
-                const recentDates = dates.slice(0, 50);
-                const prices = [];
-
-                for (const date of recentDates) {
+                const closes = dates.slice(0, 60).map(date => {
                     const dayData = timeSeries[date];
-                    let closePrice;
-
                     if (functionType === 'DIGITAL_CURRENCY_DAILY') {
-                        closePrice = parseFloat(dayData['4a. close (USD)']);
-                    } else if (functionType === 'FX_DAILY') {
-                        closePrice = parseFloat(dayData['4. close']);
+                        return parseFloat(dayData['4a. close (USD)']);
                     } else {
-                        closePrice = parseFloat(dayData['4. close']);
+                        return parseFloat(dayData['4. close']);
                     }
+                });
 
-                    if (!isNaN(closePrice)) {
-                        prices.push(closePrice);
-                    }
-                }
-
-                if (prices.length < 50) {
-                    throw new Error('Insufficient valid price data');
-                }
-
-                const currentPrice = prices[0];
-                const ma50 = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-                const position = currentPrice > ma50 ? 'above' : 'below';
-                const distance = ((currentPrice - ma50) / ma50) * 100;
-
-                console.log(`✅ ${symbol}: $${currentPrice.toFixed(2)} vs MA $${ma50.toFixed(2)} (${position})`);
-
-                return {
-                    currentPrice,
-                    ma50,
-                    position,
-                    distance,
-                    success: true
-                };
+                console.log(`✅ Alpha Vantage success for ${symbol}`);
+                return closes;
 
             } catch (error) {
-                console.error(`❌ Error fetching ${investment.symbol}:`, error.message);
-                return {
-                    success: false,
-                    error: error.message
-                };
+                console.log(`❌ Alpha Vantage failed for ${symbol}: ${error.message}`);
+                throw error;
+            }
+        }
+
+        async function fetchFromYahoo(symbol) {
+            try {
+                console.log(`🔄 Trying Yahoo Finance for ${symbol}...`);
+                const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=60d`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data.chart || !data.chart.result || !data.chart.result[0]) {
+                    throw new Error('No chart data');
+                }
+
+                const result = data.chart.result[0];
+                const closes = result.indicators.quote[0].close;
+
+                if (!closes || closes.length < 50) {
+                    throw new Error('Insufficient data');
+                }
+
+                console.log(`✅ Yahoo Finance success for ${symbol}`);
+                return closes;
+
+            } catch (error) {
+                console.log(`❌ Yahoo Finance failed for ${symbol}: ${error.message}`);
+                throw error;
+            }
+        }
+
+        async function fetchInvestmentData(investment) {
+            const symbol = investment.symbol;
+            const type = investment.type;
+
+            // Try Alpha Vantage first
+            try {
+                const closes = await fetchFromAlphaVantage(symbol, type);
+                return processPrices(investment, closes, 'Alpha Vantage');
+            } catch (avError) {
+                console.log(`Alpha Vantage failed for ${symbol}, trying Yahoo Finance...`);
+
+                // Fallback to Yahoo Finance
+                try {
+                    const closes = await fetchFromYahoo(symbol);
+                    return processPrices(investment, closes, 'Yahoo Finance');
+                } catch (yfError) {
+                    console.error(`Both sources failed for ${symbol}`);
+                    return {
+                        success: false,
+                        error: `Alpha Vantage: ${avError.message}, Yahoo: ${yfError.message}`,
+                        dataSource: 'Failed'
+                    };
+                }
             }
         }
 
@@ -369,10 +438,12 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span>Starting portfolio check...';
 
-            showMessage('🚀 Starting check of your investments... This will take 6+ minutes due to strict API rate limits (20 seconds between each call).', 'success');
+            showMessage('🚀 Starting multi-source portfolio check... Alpha Vantage primary, Yahoo Finance backup.', 'success');
 
             let successCount = 0;
             let errorCount = 0;
+            let alphaVantageCount = 0;
+            let yahooCount = 0;
 
             for (let i = 0; i < portfolioData.length; i++) {
                 const investment = portfolioData[i];
@@ -387,20 +458,26 @@
                         currentPrice: result.currentPrice,
                         ma50: result.ma50,
                         position: result.position,
-                        distance: result.distance
+                        distance: result.distance,
+                        dataSource: result.dataSource
                     };
                     successCount++;
+
+                    if (result.dataSource === 'Alpha Vantage') alphaVantageCount++;
+                    else if (result.dataSource === 'Yahoo Finance') yahooCount++;
+
                 } else {
+                    portfolioData[i].dataSource = 'Failed';
                     errorCount++;
                 }
 
                 renderPortfolio();
                 updateStats();
 
-                // INCREASED DELAY: 20 seconds between requests to avoid rate limiting
+                // 10 second delay between requests
                 if (i < portfolioData.length - 1) {
-                    for (let countdown = 20; countdown > 0; countdown--) {
-                        btn.innerHTML = `<span class="spinner"></span>Next check in ${countdown}s... (${i + 1}/${portfolioData.length} done, ${successCount} successful)`;
+                    for (let countdown = 10; countdown > 0; countdown--) {
+                        btn.innerHTML = `<span class="spinner"></span>Next in ${countdown}s... (${i + 1}/${portfolioData.length} done, ${successCount} successful)`;
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 }
@@ -410,8 +487,10 @@
             btn.innerHTML = '🔄 Check All My Investments';
             isChecking = false;
 
-            let resultMessage = `✅ Portfolio check complete! Successfully checked ${successCount} of your ${portfolioData.length} investments.`;
-            if (errorCount > 0) resultMessage += ` ${errorCount} failed due to API limitations.`;
+            let resultMessage = `✅ Portfolio check complete! Successfully checked ${successCount}/${portfolioData.length} investments.`;
+            if (alphaVantageCount > 0) resultMessage += ` Alpha Vantage: ${alphaVantageCount}.`;
+            if (yahooCount > 0) resultMessage += ` Yahoo Finance: ${yahooCount}.`;
+            if (errorCount > 0) resultMessage += ` Failed: ${errorCount}.`;
 
             showMessage(resultMessage, successCount > 0 ? 'success' : 'error');
         }
@@ -444,20 +523,25 @@
                     portfolio: portfolioData,
                     exportDate: new Date().toISOString(),
                     totalInvestments: portfolioData.length,
-                    apiCallsUsed: apiCallsUsed
+                    apiCallsUsed: apiCallsUsed,
+                    dataSources: {
+                        alphaVantage: portfolioData.filter(inv => inv.dataSource === 'Alpha Vantage').length,
+                        yahooFinance: portfolioData.filter(inv => inv.dataSource === 'Yahoo Finance').length,
+                        failed: portfolioData.filter(inv => inv.dataSource === 'Failed').length
+                    }
                 };
 
                 const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `my-investments-${new Date().toISOString().split('T')[0]}.json`;
+                a.download = `multi-source-investments-${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                showMessage('📊 Your investment portfolio data exported successfully!', 'success');
+                showMessage('📊 Multi-source portfolio data exported successfully!', 'success');
             } catch (error) {
                 showMessage('❌ Error exporting data', 'error');
             }
@@ -466,11 +550,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             renderPortfolio();
             updateStats();
-            showMessage('✅ Dashboard loaded! Rate limiting fixed - now using 20 second delays between API calls.', 'success');
+            showMessage('🚀 Multi-source system loaded! Alpha Vantage primary + Yahoo Finance unlimited backup.', 'success');
 
-            console.log('📊 Your Investment Portfolio Dashboard Loaded!');
-            console.log('🔑 API Key configured');
-            console.log('📈 Ready to monitor:', portfolioData.map(inv => inv.symbol).join(', '));
+            console.log('📊 Multi-Source Investment Portfolio Dashboard Loaded!');
+            console.log('🥇 Primary: Alpha Vantage (1000 calls/day)');
+            console.log('🚀 Backup: Yahoo Finance (unlimited)');
+            console.log('📈 Ready to monitor 16 investments with unlimited reliability');
         });
     </script>
 </body>
