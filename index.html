@@ -1,137 +1,187 @@
-<script>
-  const API_KEYS = ['KKV2RG3N00OPLLW1', 'MX0AX5U6LX0HYGVW'];
-  let keyIndex = 0;
-  const investments = [
-    { symbol: 'VOO', type: 'ETF' },
-    { symbol: 'VEA', type: 'ETF' },
-    { symbol: 'VTI', type: 'ETF' },
-    { symbol: 'EWJ', type: 'ETF' },
-    { symbol: 'VWO', type: 'ETF' },
-    { symbol: 'EEM', type: 'ETF' },
-    { symbol: 'EWZ', type: 'ETF' },
-    { symbol: 'MCHI', type: 'ETF' },
-    { symbol: 'BTC', type: 'Crypto' },
-    { symbol: 'ETH', type: 'Crypto' },
-    { symbol: 'SOL', type: 'Crypto' },
-    { symbol: 'XRP', type: 'Crypto' },
-    { symbol: 'SLV', type: 'ETF' },
-    { symbol: 'GLD', type: 'ETF' },
-    { symbol: 'GBPUSD', type: 'Forex' },
-    { symbol: 'USDINR', type: 'Forex' }
-  ];
-  let portfolio = investments.map(i=>({ ...i, price:0, ma:0, pos:'', dist:0 }));
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Investment Portfolio Dashboard</title>
+  <style>
+    /* (Your existing CSS here—unchanged) */
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- (Your existing header, API status, buttons, etc.) -->
+    <button id="check-btn">🔄 Check All My Investments</button>
+    <div id="messages"></div>
+    <table>
+      <thead>
+        <tr>
+          <th># Symbol</th><th>Price</th><th>MA50</th><th>Position</th><th>Distance</th><th>Source</th>
+        </tr>
+      </thead>
+      <tbody id="portfolio-tbody"></tbody>
+    </table>
+  </div>
 
-  function getKey(){ return API_KEYS[keyIndex]; }
-  function rotateKey(){ keyIndex=(keyIndex+1)%API_KEYS.length; }
+  <script>
+    // Dual API + Yahoo + CoinGecko hybrid script
+    
+    const API_KEYS = ['KKV2RG3N00OPLLW1', 'MX0AX5U6LX0HYGVW'];
+    let keyIndex = 0, apiCallsUsed = 0, isChecking = false;
 
-  async function fetchAV(symbol, fn){
-    const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${symbol}&apikey=${getKey()}`;
-    const j=await fetch(url).then(r=>r.json());
-    if(j['Information']||j['Note']){ throw new Error('limit'); }
-    return j;
-  }
+    const investments = [
+      { symbol: 'VOO', type: 'ETF' },
+      { symbol: 'VEA', type: 'ETF' },
+      { symbol: 'VTI', type: 'ETF' },
+      { symbol: 'EWJ', type: 'ETF' },
+      { symbol: 'VWO', type: 'ETF' },
+      { symbol: 'EEM', type: 'ETF' },
+      { symbol: 'EWZ', type: 'ETF' },
+      { symbol: 'MCHI', type: 'ETF' },
+      { symbol: 'BTC', type: 'Crypto' },
+      { symbol: 'ETH', type: 'Crypto' },
+      { symbol: 'SOL', type: 'Crypto' },
+      { symbol: 'XRP', type: 'Crypto' },
+      { symbol: 'SLV', type: 'ETF' },
+      { symbol: 'GLD', type: 'ETF' },
+      { symbol: 'GBPUSD', type: 'Forex' },
+      { symbol: 'USDINR', type: 'Forex' }
+    ];
 
-  async function fetchFromAlpha(inv){
-    const sym=inv.symbol;
-    const fn = inv.type==='Crypto' ? 'DIGITAL_CURRENCY_DAILY'
-             : inv.type==='Forex'   ? 'FX_DAILY'
-             : 'TIME_SERIES_DAILY';
-    let j=await fetchAV(sym, fn);
-    let ts= fn==='DIGITAL_CURRENCY_DAILY'
-      ? j['Time Series (Digital Currency Daily)']
-      : fn==='FX_DAILY'
-      ? j['Time Series FX (Daily)']
-      : j['Time Series (Daily)'];
-    if(!ts) throw new Error('nodata');
-    const closes=Object.values(ts).map(day=>{
-      return fn==='DIGITAL_CURRENCY_DAILY'
-        ? parseFloat(day['4a. close (USD)'])
-        : parseFloat(day['4. close']);
-    }).filter(p=>!isNaN(p));
-    if(closes.length<50) throw new Error('nodata');
-    return closes.slice(0,50).reverse();
-  }
+    let portfolio = investments.map(i => ({
+      ...i, price: 0, ma: 0, pos: '', dist: 0, src: '—'
+    }));
 
-  async function fetchFromYahoo(sym){
-    const url=`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=60d`;
-    const j=await fetch(url).then(r=>r.json());
-    const closes=j.chart.result[0].indicators.quote[0].close;
-    const c=closes.filter(p=>p!=null);
-    if(c.length<50) throw new Error('nodata');
-    return c.slice(-50).reverse();
-  }
+    function getKey() {
+      return API_KEYS[keyIndex];
+    }
+    function rotateKey() {
+      keyIndex = (keyIndex + 1) % API_KEYS.length;
+    }
+    function showMessage(msg, cls = 'success') {
+      const m = document.getElementById('messages');
+      m.innerHTML = `<div class="message ${cls}">${msg}</div>`;
+      setTimeout(()=> m.innerHTML = '', 8000);
+    }
+    function render() {
+      const b = document.getElementById('portfolio-tbody');
+      b.innerHTML = portfolio.map((inv, i) => `
+        <tr>
+          <td>${i+1}. ${inv.symbol}</td>
+          <td>${inv.price?inv.price.toFixed(2):'—'}</td>
+          <td>${inv.ma?inv.ma.toFixed(2):'—'}</td>
+          <td>${inv.pos||'—'}</td>
+          <td>${inv.dist?inv.dist.toFixed(2)+'%':'—'}</td>
+          <td>${inv.src}</td>
+        </tr>`).join('');
+    }
+    function updateStats() {
+      // implement if you have stats fields
+    }
 
-  async function fetchFromCoinGecko(sym){
-    const ids={BTC:'bitcoin',ETH:'ethereum',SOL:'solana',XRP:'ripple'};
-    const id=ids[sym]; if(!id) throw new Error('nocg');
-    const url=`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=60`;
-    const j=await fetch(url).then(r=>r.json());
-    const c=j.prices.map(p=>p[1]).filter(p=>!isNaN(p));
-    if(c.length<50) throw new Error('nocg');
-    return c.slice(-50).reverse();
-  }
+    async function fetchAV(sym, fn) {
+      const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${sym}&apikey=${getKey()}`;
+      const r = await fetch(url).then(r=>r.json());
+      apiCallsUsed++;
+      if(r['Information']||r['Note']) {
+        rotateKey();
+        throw new Error('rate limit');
+      }
+      return r;
+    }
 
-  function calc(inv, closes, src){
-    const price=closes[closes.length-1];
-    const ma=closes.reduce((a,b)=>a+b)/closes.length;
-    const pos=price>ma?'above':'below';
-    return { price,ma,pos,dist:(price-ma)/ma*100,src };
-  }
+    async function fetchAlpha(inv) {
+      const fn = inv.type==='Crypto'?'DIGITAL_CURRENCY_DAILY'
+               : inv.type==='Forex'  ? 'FX_DAILY'
+               : 'TIME_SERIES_DAILY';
+      const j = await fetchAV(inv.symbol, fn);
+      const ts = fn==='DIGITAL_CURRENCY_DAILY'
+        ? j['Time Series (Digital Currency Daily)']
+        : fn==='FX_DAILY'
+        ? j['Time Series FX (Daily)']
+        : j['Time Series (Daily)'];
+      if(!ts) throw new Error('nodata');
+      const closes = Object.values(ts).map(d =>
+        fn==='DIGITAL_CURRENCY_DAILY'
+          ? parseFloat(d['4a. close (USD)'])
+          : parseFloat(d['4. close'])
+      ).filter(p=>!isNaN(p));
+      if(closes.length<50) throw new Error('nodata');
+      return closes.slice(0,50).reverse();
+    }
 
-  async function fetchData(inv){
-    // try alpha
-    for(let i=0;i<API_KEYS.length;i++){
-      try{
-        const c=await fetchFromAlpha(inv);
-        return calc(inv,c,'AlphaV');
-      }catch(e){
-        if(e.message==='limit') rotateKey();
-        else break;
+    async function fetchYahoo(sym) {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=60d`;
+      const j = await fetch(url).then(r=>r.json());
+      const arr = j.chart?.result?.[0]?.indicators.quote?.[0]?.close || [];
+      const c = arr.filter(p=>p!=null);
+      if(c.length<50) throw new Error('nodata');
+      return c.slice(-50).reverse();
+    }
+
+    async function fetchCG(sym) {
+      const map = { BTC:'bitcoin', ETH:'ethereum', SOL:'solana', XRP:'ripple' };
+      const id = map[sym];
+      if(!id) throw new Error('nocg');
+      const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=60`;
+      const j = await fetch(url).then(r=>r.json());
+      const c = j.prices.map(p=>p[1]).filter(p=>!isNaN(p));
+      if(c.length<50) throw new Error('nodata');
+      return c.slice(-50).reverse();
+    }
+
+    function process(inv, arr, src) {
+      const price = arr[arr.length-1];
+      const ma = arr.reduce((a,b)=>a+b)/arr.length;
+      const pos = price>ma?'above':'below';
+      const dist = (price-ma)/ma*100;
+      return { price,ma,pos,dist,src };
+    }
+
+    async function fetchData(inv) {
+      try {
+        const a = await fetchAlpha(inv);
+        return process(inv,a,'AV');
+      } catch {
+        if(inv.type!=='Crypto') {
+          try {
+            const y = await fetchYahoo(inv.symbol);
+            return process(inv,y,'Yahoo');
+          } catch{}
+        }
+        if(inv.type==='Crypto') {
+          try {
+            const c = await fetchCG(inv.symbol);
+            return process(inv,c,'CG');
+          } catch{}
+        }
+        return { error:'no data',src:'failed' };
       }
     }
-    // fallback yahoo for non-crypto
-    if(inv.type!=='Crypto'){
-      try{ const c=await fetchFromYahoo(inv.symbol); return calc(inv,c,'Yahoo'); }
-      catch{}
-    }
-    // fallback coingecko for crypto
-    if(inv.type==='Crypto'){
-      try{ const c=await fetchFromCoinGecko(inv.symbol); return calc(inv,c,'CG'); }
-      catch{}
-    }
-    return { error:'No data',src:'' };
-  }
 
-  async function checkAll(){
-    for(let i=0;i<portfolio.length;i++){
-      const inv=portfolio[i];
-      document.getElementById('check-btn').textContent=`Checking ${inv.symbol}`;
-      const r=await fetchData(inv);
-      if(!r.error){
-        Object.assign(inv,{price:r.price,ma:r.ma,pos:r.pos,dist:r.dist,src:r.src});
+    async function checkAll() {
+      if(isChecking) return;
+      isChecking=true;
+      document.getElementById('check-btn').disabled=true;
+      showMessage('Checking investments…','success');
+      for(let i=0;i<portfolio.length;i++){
+        document.getElementById('check-btn').textContent=`Checking ${portfolio[i].symbol}`;
+        const r = await fetchData(portfolio[i]);
+        if(!r.error) Object.assign(portfolio[i],r);
+        render();
+        await new Promise(r=>setTimeout(r,10000));
       }
+      document.getElementById('check-btn').textContent='🔄 Check All My Investments';
+      document.getElementById('check-btn').disabled=false;
+      showMessage('✅ Done','success');
+      isChecking=false;
+    }
+
+    document.getElementById('check-btn').onclick=checkAll;
+    document.addEventListener('DOMContentLoaded',()=>{
       render();
-      await new Promise(r=>setTimeout(r,10000));
-    }
-    document.getElementById('check-btn').textContent='Check All My Investments';
-  }
-
-  function render(){
-    const b=document.getElementById('portfolio-tbody');
-    b.innerHTML=portfolio.map((inv,i)=>`
-      <tr>
-        <td>${i+1}. ${inv.symbol}</td>
-        <td>${inv.price?inv.price.toFixed(2):'--'}</td>
-        <td>${inv.ma?inv.ma.toFixed(2):'--'}</td>
-        <td>${inv.pos||'--'}</td>
-        <td>${inv.dist?inv.dist.toFixed(2)+'%':'--'}</td>
-        <td>${inv.src||'--'}</td>
-      </tr>`).join('');
-  }
-
-  document.getElementById('check-btn').onclick=checkAll;
-  document.addEventListener('DOMContentLoaded',()=>{
-    render();
-    console.log('Ready');
-  });
-</script>
+      console.log('Dashboard ready');
+    });
+  </script>
+</body>
+</html>
