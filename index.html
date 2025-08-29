@@ -1,590 +1,137 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Investment Portfolio Dashboard</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; line-height: 1.6; min-height: 100vh; }
-        .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-
-        /* Header */
-        .dashboard-header { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); backdrop-filter: blur(10px); }
-        .dashboard-header h1 { font-size: 2.2em; color: #2c3e50; margin-bottom: 15px; text-align: center; }
-        .header-info { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .portfolio-summary { display: flex; gap: 25px; flex-wrap: wrap; }
-        .summary-item { display: flex; flex-direction: column; align-items: center; padding: 15px 20px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #6c757d; }
-        .summary-item.success { border-left-color: #28a745; }
-        .summary-item.error { border-left-color: #dc3545; }
-        .summary-number { font-size: 1.8em; font-weight: bold; color: #2c3e50; }
-        .summary-label { font-size: 0.9em; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        /* Status Panel */
-        .status-panel { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 20px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .status-info { display: flex; flex-direction: column; gap: 8px; }
-        .status-item { display: flex; align-items: center; gap: 10px; }
-        .status-icon { font-size: 1.2em; }
-        .status-text { color: #495057; font-weight: 500; }
-
-        /* API Status */
-        .api-status { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 20px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); }
-        .api-keys { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .api-key-status { padding: 15px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #28a745; }
-        .api-key-status.exhausted { border-left-color: #dc3545; background: #fff5f5; }
-        .api-key-status.active { border-left-color: #007bff; background: #f0f8ff; }
-
-        /* Buttons */
-        .btn-main { background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3); }
-        .btn-main:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4); }
-        .btn-main:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
-        .btn-secondary { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.95em; cursor: pointer; transition: all 0.3s ease; }
-        .btn-secondary:hover { background: #5a6268; transform: translateY(-1px); }
-        .settings-btn { background: #17a2b8; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; }
-        .settings-btn:hover { background: #138496; }
-
-        /* Portfolio Section */
-        .portfolio-section { background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); }
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
-        .section-header h2 { color: #2c3e50; font-size: 1.6em; }
-        .portfolio-controls { display: flex; gap: 10px; }
-        .portfolio-table-container { overflow-x: auto; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
-        .portfolio-table { width: 100%; border-collapse: collapse; background: white; }
-        .portfolio-table th, .portfolio-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #dee2e6; }
-        .portfolio-table th { background: #f8f9fa; font-weight: 600; color: #495057; position: sticky; top: 0; }
-        .sortable { cursor: pointer; user-select: none; }
-        .sortable:hover { background: #e9ecef; }
-        .portfolio-table tr:hover { background: #f8f9fa; }
-        .position-above { color: #28a745; font-weight: 600; }
-        .position-below { color: #dc3545; font-weight: 600; }
-        .position-unknown { color: #6c757d; }
-
-        /* Messages */
-        .message { padding: 15px 20px; margin: 15px 0; border-radius: 10px; font-weight: 500; }
-        .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .message.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
-
-        /* Spinner */
-        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #ffffff; border-radius: 50%; border-top-color: transparent; animation: spin 1s ease-in-out infinite; margin-right: 8px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .api-keys { grid-template-columns: 1fr; }
-        }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <h1>📊 My Investment Portfolio Dashboard</h1>
-            <div class="header-info">
-                <div class="portfolio-summary">
-                    <div class="summary-item">
-                        <span class="summary-number" id="total-investments">16</span>
-                        <span class="summary-label">Investments</span>
-                    </div>
-                    <div class="summary-item success">
-                        <span class="summary-number" id="above-ma">0</span>
-                        <span class="summary-label">Above MA</span>
-                    </div>
-                    <div class="summary-item error">  
-                        <span class="summary-number" id="below-ma">0</span>
-                        <span class="summary-label">Below MA</span>
-                    </div>
-                </div>
-                <button class="settings-btn" onclick="exportData()">📊 Export</button>
-            </div>
-        </header>
-
-        <!-- API Status Panel -->
-        <div class="api-status">
-            <h3 style="margin-bottom: 15px; color: #2c3e50;">🔑 Dual API Key Status - Total: 1000 Calls/Day</h3>
-            <div class="api-keys">
-                <div class="api-key-status" id="key1-status">
-                    <div style="font-weight: 600; margin-bottom: 5px;">API Key #1: KKV2RG...</div>
-                    <div>Usage: <span id="key1-usage">0</span>/500</div>
-                    <div style="font-size: 0.9em; color: #666;">Status: <span id="key1-status-text">Ready</span></div>
-                </div>
-                <div class="api-key-status" id="key2-status">
-                    <div style="font-weight: 600; margin-bottom: 5px;">API Key #2: MX0AX5...</div>
-                    <div>Usage: <span id="key2-usage">0</span>/500</div>
-                    <div style="font-size: 0.9em; color: #666;">Status: <span id="key2-status-text">Ready</span></div>
-                </div>
-            </div>
-            <div style="margin-top: 15px; text-align: center; color: #666;">
-                <strong>Current Active Key:</strong> <span id="active-key-display">Key #1</span> | 
-                <strong>Total Available:</strong> <span id="total-available">1000</span> calls
-            </div>
-        </div>
-
-        <!-- Status Panel -->
-        <div class="status-panel">
-            <div class="status-info">
-                <div class="status-item">
-                    <span class="status-icon">🚀</span>
-                    <span class="status-text">Dual API System - Automatic key rotation when limits reached</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-icon">⏱️</span>
-                    <span class="status-text">15 second delays between calls to prevent rate limiting</span>
-                </div>
-            </div>
-            <button class="btn-main" onclick="checkAllInvestments()" id="check-btn">🔄 Check All My Investments</button>
-        </div>
-
-        <!-- Messages -->
-        <div id="messages"></div>
-
-        <!-- Portfolio Section -->
-        <section class="portfolio-section">
-            <div class="section-header">
-                <h2>📈 My Investment Portfolio</h2>
-                <div class="portfolio-controls">
-                    <button onclick="refreshDisplay()" class="btn-secondary">🔄 Refresh Display</button>
-                </div>
-            </div>
-
-            <div class="portfolio-table-container">
-                <table class="portfolio-table">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable('symbol')" class="sortable"># Symbol ↕️</th>
-                            <th onclick="sortTable('name')" class="sortable">Investment Name ↕️</th>
-                            <th onclick="sortTable('type')" class="sortable">Type ↕️</th>
-                            <th onclick="sortTable('currentPrice')" class="sortable">Current Price ↕️</th>
-                            <th onclick="sortTable('ma50')" class="sortable">50-day MA ↕️</th>
-                            <th>Position vs MA</th>
-                            <th>Distance from MA</th>
-                            <th>Last Alert</th>
-                        </tr>
-                    </thead>
-                    <tbody id="portfolio-tbody">
-                        <tr>
-                            <td colspan="8" style="text-align: center; padding: 40px; opacity: 0.7;">
-                                <div style="font-size: 1.1em; margin-bottom: 10px;">🚀 Dual API System Loaded!</div>
-                                <div>You have 1000 total API calls available. Click "Check All My Investments" to start monitoring.</div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </div>
-
-    <script>
-        // DUAL API KEY SYSTEM - 1000 total calls per day
-        const API_KEYS = [
-            { key: 'KKV2RG3N00OPLLW1', usage: 0, exhausted: false, name: 'Key #1' },
-            { key: 'MX0AX5U6LX0HYGVW', usage: 0, exhausted: false, name: 'Key #2' }
-        ];
-
-        let currentKeyIndex = 0;
-
-        const investments = [
-            { symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'Large Cap ETF' },
-            { symbol: 'VEA', name: 'Vanguard Developed Markets ETF', type: 'International ETF' },
-            { symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', type: 'Broad Market ETF' },
-            { symbol: 'EWJ', name: 'iShares MSCI Japan ETF', type: 'Country ETF' },
-            { symbol: 'VWO', name: 'Vanguard Emerging Markets ETF', type: 'Emerging Markets ETF' },
-            { symbol: 'EEM', name: 'iShares MSCI Emerging Markets ETF (HSBC MSCI equivalent)', type: 'Emerging Markets ETF' },
-            { symbol: 'EWZ', name: 'iShares MSCI Brazil ETF (Amundi MSCI Brazil equivalent)', type: 'Country ETF' },
-            { symbol: 'MCHI', name: 'iShares MSCI China ETF (Amundi MSCI China equivalent)', type: 'Country ETF' },
-            { symbol: 'BTC', name: 'Bitcoin', type: 'Cryptocurrency' },
-            { symbol: 'ETH', name: 'Ethereum', type: 'Cryptocurrency' },
-            { symbol: 'SOL', name: 'Solana', type: 'Cryptocurrency' },
-            { symbol: 'XRP', name: 'Ripple', type: 'Cryptocurrency' },
-            { symbol: 'SLV', name: 'iShares Silver Trust ETF (Invesco Physical Silver equivalent)', type: 'Precious Metals ETF' },
-            { symbol: 'GLD', name: 'SPDR Gold Trust ETF (Invesco Physical Gold equivalent)', type: 'Precious Metals ETF' },
-            { symbol: 'GBPUSD', name: 'British Pound/USD', type: 'Forex Pair' },
-            { symbol: 'USDINR', name: 'US Dollar/Indian Rupee', type: 'Forex Pair' }
-        ];
-
-        let portfolioData = investments.map(inv => ({
-            ...inv,
-            currentPrice: 0,
-            ma50: 0,
-            position: 'unknown',
-            distance: 0,
-            lastAlert: 'None'
-        }));
-
-        let isChecking = false;
-
-        function getCurrentApiKey() {
-            return API_KEYS[currentKeyIndex].key;
-        }
-
-        function switchToNextKey() {
-            const oldKeyIndex = currentKeyIndex;
-
-            // Find next available key
-            for (let i = 0; i < API_KEYS.length; i++) {
-                const nextIndex = (currentKeyIndex + 1 + i) % API_KEYS.length;
-                if (!API_KEYS[nextIndex].exhausted) {
-                    currentKeyIndex = nextIndex;
-                    console.log(`🔄 Switched from ${API_KEYS[oldKeyIndex].name} to ${API_KEYS[currentKeyIndex].name}`);
-                    updateApiStatus();
-                    return true;
-                }
-            }
-
-            console.log('❌ All API keys exhausted');
-            return false;
-        }
-
-        function updateApiStatus() {
-            // Update key statuses
-            API_KEYS.forEach((apiKey, index) => {
-                const keyElement = document.getElementById(`key${index + 1}-status`);
-                const usageElement = document.getElementById(`key${index + 1}-usage`);
-                const statusElement = document.getElementById(`key${index + 1}-status-text`);
-
-                usageElement.textContent = apiKey.usage;
-
-                if (apiKey.exhausted) {
-                    keyElement.className = 'api-key-status exhausted';
-                    statusElement.textContent = 'Exhausted';
-                } else if (index === currentKeyIndex) {
-                    keyElement.className = 'api-key-status active';
-                    statusElement.textContent = 'Active';
-                } else {
-                    keyElement.className = 'api-key-status';
-                    statusElement.textContent = 'Standby';
-                }
-            });
-
-            // Update active key display
-            document.getElementById('active-key-display').textContent = API_KEYS[currentKeyIndex].name;
-
-            // Update total available calls
-            const totalAvailable = API_KEYS.reduce((sum, key) => sum + (500 - key.usage), 0);
-            document.getElementById('total-available').textContent = totalAvailable;
-        }
-
-        function showMessage(message, type = 'success') {
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
-            setTimeout(() => {
-                messagesDiv.innerHTML = '';
-            }, 10000);
-        }
-
-        function renderPortfolio() {
-            const tbody = document.getElementById('portfolio-tbody');
-
-            tbody.innerHTML = portfolioData.map((investment, index) => {
-                const price = investment.currentPrice || 0;
-                const ma50 = investment.ma50 || 0;
-                const position = investment.position || 'unknown';
-                const distance = investment.distance || 0;
-                const lastAlert = investment.lastAlert || 'None';
-
-                let positionClass = 'position-unknown';
-                let positionText = '⚪ Not checked';
-                if (position === 'above') {
-                    positionClass = 'position-above';
-                    positionText = '🟢 Above MA';
-                } else if (position === 'below') {
-                    positionClass = 'position-below';
-                    positionText = '🔴 Below MA';
-                }
-
-                let typeEmoji = '';
-                if (investment.type.includes('ETF')) typeEmoji = '🏢';
-                else if (investment.type.includes('Crypto')) typeEmoji = '₿';
-                else if (investment.type.includes('Forex')) typeEmoji = '💱';
-
-                return `
-                    <tr>
-                        <td><strong>${index + 1}. ${investment.symbol}</strong></td>
-                        <td>${typeEmoji} ${investment.name}</td>
-                        <td>${investment.type}</td>
-                        <td>${price > 0 ? '$' + price.toFixed(2) : 'Not checked'}</td>
-                        <td>${ma50 > 0 ? '$' + ma50.toFixed(2) : 'Not checked'}</td>
-                        <td><span class="${positionClass}">${positionText}</span></td>
-                        <td>${distance !== 0 ? (distance > 0 ? '+' : '') + distance.toFixed(2) + '%' : '0.00%'}</td>
-                        <td>${lastAlert}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function updateStats() {
-            const total = portfolioData.length;
-            const aboveMA = portfolioData.filter(inv => inv.position === 'above').length;
-            const belowMA = portfolioData.filter(inv => inv.position === 'below').length;
-
-            document.getElementById('total-investments').textContent = total;
-            document.getElementById('above-ma').textContent = aboveMA;
-            document.getElementById('below-ma').textContent = belowMA;
-
-            updateApiStatus();
-        }
-
-        async function fetchInvestmentData(investment, retryCount = 0) {
-            try {
-                const currentKey = getCurrentApiKey();
-                let url, functionType;
-                const typeLower = investment.type.toLowerCase();
-                const symbol = investment.symbol;
-
-                if (typeLower.includes('crypto')) {
-                    functionType = 'DIGITAL_CURRENCY_DAILY';
-                    url = `https://www.alphavantage.co/query?function=${functionType}&symbol=${symbol}&market=USD&apikey=${currentKey}`;
-                } else if (typeLower.includes('forex')) {
-                    functionType = 'FX_DAILY';
-                    const fromCurrency = symbol.substring(0, 3);
-                    const toCurrency = symbol.substring(3);
-                    url = `https://www.alphavantage.co/query?function=${functionType}&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&apikey=${currentKey}`;
-                } else {
-                    functionType = 'TIME_SERIES_DAILY';
-                    url = `https://www.alphavantage.co/query?function=${functionType}&symbol=${symbol}&apikey=${currentKey}`;
-                }
-
-                console.log(`🔄 Fetching ${symbol} using ${API_KEYS[currentKeyIndex].name} (${functionType})`);
-                const response = await fetch(url);
-                const data = await response.json();
-
-                // Increment usage for current key
-                API_KEYS[currentKeyIndex].usage++;
-                updateApiStatus();
-
-                console.log(`📊 API Response for ${symbol}:`, data);
-
-                // Check for daily limit exceeded
-                if (data['Information'] && data['Information'].includes('daily rate limits')) {
-                    console.log(`❌ ${API_KEYS[currentKeyIndex].name} daily limit exceeded for ${symbol}`);
-                    API_KEYS[currentKeyIndex].exhausted = true;
-
-                    // Try to switch to next available key and retry
-                    if (switchToNextKey() && retryCount < 2) {
-                        console.log(`🔄 Retrying ${symbol} with ${API_KEYS[currentKeyIndex].name}`);
-                        return await fetchInvestmentData(investment, retryCount + 1);
-                    } else {
-                        throw new Error('All API keys exhausted');
-                    }
-                }
-
-                if (data['Error Message']) {
-                    console.error(`❌ ${symbol} API Error:`, data['Error Message']);
-                    throw new Error(data['Error Message']);
-                }
-
-                if (data['Note']) {
-                    console.error(`⚠️ ${symbol} Rate limit note:`, data['Note']);
-                    throw new Error('API rate limit reached - waiting...');
-                }
-
-                let timeSeries;
-                if (functionType === 'DIGITAL_CURRENCY_DAILY') {
-                    timeSeries = data['Time Series (Digital Currency Daily)'];
-                } else if (functionType === 'FX_DAILY') {
-                    timeSeries = data['Time Series FX (Daily)'];
-                } else {
-                    timeSeries = data['Time Series (Daily)'];
-                }
-
-                if (!timeSeries) {
-                    console.error(`❌ ${symbol} No time series in response:`, Object.keys(data));
-                    throw new Error(`No time series data - got: ${Object.keys(data).join(', ')}`);
-                }
-
-                const dates = Object.keys(timeSeries).sort().reverse();
-                console.log(`📅 ${symbol} has ${dates.length} days of data`);
-
-                if (dates.length < 50) {
-                    throw new Error(`Only ${dates.length} days of data (need 50 for MA)`);
-                }
-
-                const recentDates = dates.slice(0, 50);
-                const prices = [];
-
-                for (const date of recentDates) {
-                    const dayData = timeSeries[date];
-                    let closePrice;
-
-                    if (functionType === 'DIGITAL_CURRENCY_DAILY') {
-                        closePrice = parseFloat(dayData['4a. close (USD)']);
-                    } else if (functionType === 'FX_DAILY') {
-                        closePrice = parseFloat(dayData['4. close']);
-                    } else {
-                        closePrice = parseFloat(dayData['4. close']);
-                    }
-
-                    if (!isNaN(closePrice)) {
-                        prices.push(closePrice);
-                    }
-                }
-
-                if (prices.length < 50) {
-                    throw new Error('Insufficient valid price data');
-                }
-
-                const currentPrice = prices[0];
-                const ma50 = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-                const position = currentPrice > ma50 ? 'above' : 'below';
-                const distance = ((currentPrice - ma50) / ma50) * 100;
-
-                console.log(`✅ ${symbol}: $${currentPrice.toFixed(2)} vs MA $${ma50.toFixed(2)} (${position}) [${API_KEYS[currentKeyIndex].name}]`);
-
-                return {
-                    currentPrice,
-                    ma50,
-                    position,
-                    distance,
-                    success: true
-                };
-
-            } catch (error) {
-                console.error(`❌ Error fetching ${investment.symbol}:`, error.message);
-                return {
-                    success: false,
-                    error: error.message
-                };
-            }
-        }
-
-        async function checkAllInvestments() {
-            if (isChecking) {
-                showMessage('Portfolio check already in progress! Please wait...', 'warning');
-                return;
-            }
-
-            // Check if any keys are available
-            if (API_KEYS.every(key => key.exhausted)) {
-                showMessage('❌ All API keys exhausted. Please wait until tomorrow for reset.', 'error');
-                return;
-            }
-
-            isChecking = true;
-            const btn = document.getElementById('check-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span>Starting portfolio check...';
-
-            showMessage('🚀 Starting check with dual API system... Maximum 1000 calls available.', 'success');
-
-            let successCount = 0;
-            let errorCount = 0;
-
-            for (let i = 0; i < portfolioData.length; i++) {
-                const investment = portfolioData[i];
-
-                // Check if current key is exhausted, switch if needed
-                if (API_KEYS[currentKeyIndex].exhausted) {
-                    if (!switchToNextKey()) {
-                        showMessage('❌ All API keys exhausted during check.', 'error');
-                        break;
-                    }
-                }
-
-                btn.innerHTML = `<span class="spinner"></span>Checking ${investment.symbol} (${i + 1}/${portfolioData.length}) [${API_KEYS[currentKeyIndex].name}]`;
-
-                const result = await fetchInvestmentData(investment);
-
-                if (result.success) {
-                    portfolioData[i] = {
-                        ...investment,
-                        currentPrice: result.currentPrice,
-                        ma50: result.ma50,
-                        position: result.position,
-                        distance: result.distance
-                    };
-                    successCount++;
-                } else {
-                    errorCount++;
-                }
-
-                renderPortfolio();
-                updateStats();
-
-                // 15 second delay between requests
-                if (i < portfolioData.length - 1) {
-                    for (let countdown = 15; countdown > 0; countdown--) {
-                        btn.innerHTML = `<span class="spinner"></span>Next in ${countdown}s... (${i + 1}/${portfolioData.length} done, ${successCount} successful) [${API_KEYS[currentKeyIndex].name}]`;
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-            }
-
-            btn.disabled = false;
-            btn.innerHTML = '🔄 Check All My Investments';
-            isChecking = false;
-
-            const totalUsed = API_KEYS.reduce((sum, key) => sum + key.usage, 0);
-            let resultMessage = `✅ Portfolio check complete! Successfully checked ${successCount} of ${portfolioData.length} investments.`;
-            if (errorCount > 0) resultMessage += ` ${errorCount} failed.`;
-            resultMessage += ` Total API calls used: ${totalUsed}/1000.`;
-
-            showMessage(resultMessage, successCount > 0 ? 'success' : 'error');
-        }
-
-        function sortTable(key) {
-            portfolioData.sort((a, b) => {
-                let aVal = a[key] || 0;
-                let bVal = b[key] || 0;
-
-                if (typeof aVal === 'string') {
-                    aVal = aVal.toLowerCase();
-                    bVal = bVal.toLowerCase();
-                }
-
-                return aVal > bVal ? 1 : -1;
-            });
-
-            renderPortfolio();
-        }
-
-        function refreshDisplay() {
-            renderPortfolio();
-            updateStats();
-            showMessage('📊 Display refreshed!', 'success');
-        }
-
-        function exportData() {
-            try {
-                const totalUsed = API_KEYS.reduce((sum, key) => sum + key.usage, 0);
-                const exportData = {
-                    portfolio: portfolioData,
-                    apiKeys: API_KEYS.map(key => ({
-                        name: key.name,
-                        usage: key.usage,
-                        exhausted: key.exhausted
-                    })),
-                    totalApiCallsUsed: totalUsed,
-                    exportDate: new Date().toISOString(),
-                    totalInvestments: portfolioData.length
-                };
-
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `dual-api-investments-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                showMessage('📊 Dual API portfolio data exported successfully!', 'success');
-            } catch (error) {
-                showMessage('❌ Error exporting data', 'error');
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            renderPortfolio();
-            updateStats();
-            showMessage('🚀 Dual API System loaded! You have 1000 total API calls available (500 per key).', 'success');
-
-            console.log('📊 Dual API Investment Portfolio Dashboard Loaded!');
-            console.log('🔑 API Keys configured:');
-            console.log('  - Key #1:', API_KEYS[0].key.substring(0, 6) + '...');
-            console.log('  - Key #2:', API_KEYS[1].key.substring(0, 6) + '...');
-            console.log('📈 Ready to monitor with 1000 total daily calls');
-        });
-    </script>
-</body>
-</html>
+<script>
+  const API_KEYS = ['KKV2RG3N00OPLLW1', 'MX0AX5U6LX0HYGVW'];
+  let keyIndex = 0;
+  const investments = [
+    { symbol: 'VOO', type: 'ETF' },
+    { symbol: 'VEA', type: 'ETF' },
+    { symbol: 'VTI', type: 'ETF' },
+    { symbol: 'EWJ', type: 'ETF' },
+    { symbol: 'VWO', type: 'ETF' },
+    { symbol: 'EEM', type: 'ETF' },
+    { symbol: 'EWZ', type: 'ETF' },
+    { symbol: 'MCHI', type: 'ETF' },
+    { symbol: 'BTC', type: 'Crypto' },
+    { symbol: 'ETH', type: 'Crypto' },
+    { symbol: 'SOL', type: 'Crypto' },
+    { symbol: 'XRP', type: 'Crypto' },
+    { symbol: 'SLV', type: 'ETF' },
+    { symbol: 'GLD', type: 'ETF' },
+    { symbol: 'GBPUSD', type: 'Forex' },
+    { symbol: 'USDINR', type: 'Forex' }
+  ];
+  let portfolio = investments.map(i=>({ ...i, price:0, ma:0, pos:'', dist:0 }));
+
+  function getKey(){ return API_KEYS[keyIndex]; }
+  function rotateKey(){ keyIndex=(keyIndex+1)%API_KEYS.length; }
+
+  async function fetchAV(symbol, fn){
+    const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${symbol}&apikey=${getKey()}`;
+    const j=await fetch(url).then(r=>r.json());
+    if(j['Information']||j['Note']){ throw new Error('limit'); }
+    return j;
+  }
+
+  async function fetchFromAlpha(inv){
+    const sym=inv.symbol;
+    const fn = inv.type==='Crypto' ? 'DIGITAL_CURRENCY_DAILY'
+             : inv.type==='Forex'   ? 'FX_DAILY'
+             : 'TIME_SERIES_DAILY';
+    let j=await fetchAV(sym, fn);
+    let ts= fn==='DIGITAL_CURRENCY_DAILY'
+      ? j['Time Series (Digital Currency Daily)']
+      : fn==='FX_DAILY'
+      ? j['Time Series FX (Daily)']
+      : j['Time Series (Daily)'];
+    if(!ts) throw new Error('nodata');
+    const closes=Object.values(ts).map(day=>{
+      return fn==='DIGITAL_CURRENCY_DAILY'
+        ? parseFloat(day['4a. close (USD)'])
+        : parseFloat(day['4. close']);
+    }).filter(p=>!isNaN(p));
+    if(closes.length<50) throw new Error('nodata');
+    return closes.slice(0,50).reverse();
+  }
+
+  async function fetchFromYahoo(sym){
+    const url=`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=60d`;
+    const j=await fetch(url).then(r=>r.json());
+    const closes=j.chart.result[0].indicators.quote[0].close;
+    const c=closes.filter(p=>p!=null);
+    if(c.length<50) throw new Error('nodata');
+    return c.slice(-50).reverse();
+  }
+
+  async function fetchFromCoinGecko(sym){
+    const ids={BTC:'bitcoin',ETH:'ethereum',SOL:'solana',XRP:'ripple'};
+    const id=ids[sym]; if(!id) throw new Error('nocg');
+    const url=`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=60`;
+    const j=await fetch(url).then(r=>r.json());
+    const c=j.prices.map(p=>p[1]).filter(p=>!isNaN(p));
+    if(c.length<50) throw new Error('nocg');
+    return c.slice(-50).reverse();
+  }
+
+  function calc(inv, closes, src){
+    const price=closes[closes.length-1];
+    const ma=closes.reduce((a,b)=>a+b)/closes.length;
+    const pos=price>ma?'above':'below';
+    return { price,ma,pos,dist:(price-ma)/ma*100,src };
+  }
+
+  async function fetchData(inv){
+    // try alpha
+    for(let i=0;i<API_KEYS.length;i++){
+      try{
+        const c=await fetchFromAlpha(inv);
+        return calc(inv,c,'AlphaV');
+      }catch(e){
+        if(e.message==='limit') rotateKey();
+        else break;
+      }
+    }
+    // fallback yahoo for non-crypto
+    if(inv.type!=='Crypto'){
+      try{ const c=await fetchFromYahoo(inv.symbol); return calc(inv,c,'Yahoo'); }
+      catch{}
+    }
+    // fallback coingecko for crypto
+    if(inv.type==='Crypto'){
+      try{ const c=await fetchFromCoinGecko(inv.symbol); return calc(inv,c,'CG'); }
+      catch{}
+    }
+    return { error:'No data',src:'' };
+  }
+
+  async function checkAll(){
+    for(let i=0;i<portfolio.length;i++){
+      const inv=portfolio[i];
+      document.getElementById('check-btn').textContent=`Checking ${inv.symbol}`;
+      const r=await fetchData(inv);
+      if(!r.error){
+        Object.assign(inv,{price:r.price,ma:r.ma,pos:r.pos,dist:r.dist,src:r.src});
+      }
+      render();
+      await new Promise(r=>setTimeout(r,10000));
+    }
+    document.getElementById('check-btn').textContent='Check All My Investments';
+  }
+
+  function render(){
+    const b=document.getElementById('portfolio-tbody');
+    b.innerHTML=portfolio.map((inv,i)=>`
+      <tr>
+        <td>${i+1}. ${inv.symbol}</td>
+        <td>${inv.price?inv.price.toFixed(2):'--'}</td>
+        <td>${inv.ma?inv.ma.toFixed(2):'--'}</td>
+        <td>${inv.pos||'--'}</td>
+        <td>${inv.dist?inv.dist.toFixed(2)+'%':'--'}</td>
+        <td>${inv.src||'--'}</td>
+      </tr>`).join('');
+  }
+
+  document.getElementById('check-btn').onclick=checkAll;
+  document.addEventListener('DOMContentLoaded',()=>{
+    render();
+    console.log('Ready');
+  });
+</script>
