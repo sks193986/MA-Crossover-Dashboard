@@ -5,175 +5,185 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>My Investment Portfolio Dashboard</title>
   <style>
-    /* (Your existing CSS here—unchanged) */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+    .dashboard-container { max-width: 1200px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h1 { text-align: center; margin-bottom: 20px; color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+    th { background: #007bff; color: white; }
+    tr:hover { background: #f1f1f1; }
+    .btn { display: inline-block; padding: 12px 24px; margin: 10px 0; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .message { margin: 10px 0; padding: 10px; border-radius: 5px; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="dashboard-container">
-    <!-- (Your existing header, API status, buttons, etc.) -->
-    <button id="check-btn">🔄 Check All My Investments</button>
+    <h1>📊 My Investment Portfolio Dashboard</h1>
+    <button id="check-btn" class="btn">🔄 Check All My Investments</button>
     <div id="messages"></div>
     <table>
       <thead>
         <tr>
-          <th># Symbol</th><th>Price</th><th>MA50</th><th>Position</th><th>Distance</th><th>Source</th>
+          <th>#</th><th>Symbol</th><th>Type</th><th>Price</th><th>50-day MA</th><th>Position</th><th>Distance</th><th>Source</th>
         </tr>
       </thead>
-      <tbody id="portfolio-tbody"></tbody>
+      <tbody id="portfolio-tbody">
+        <tr><td colspan="8" style="text-align:center; padding:20px;">Click "Check All My Investments" to populate data.</td></tr>
+      </tbody>
     </table>
   </div>
 
   <script>
-    // Dual API + Yahoo + CoinGecko hybrid script
-    
-    const API_KEYS = ['KKV2RG3N00OPLLW1', 'MX0AX5U6LX0HYGVW'];
-    let keyIndex = 0, apiCallsUsed = 0, isChecking = false;
+    // API Keys
+    const API_KEYS = ['KKV2RG3N00OPLLW1','MX0AX5U6LX0HYGVW'];
+    let keyIndex = 0, isChecking=false;
 
+    // Portfolio definitions
     const investments = [
-      { symbol: 'VOO', type: 'ETF' },
-      { symbol: 'VEA', type: 'ETF' },
-      { symbol: 'VTI', type: 'ETF' },
-      { symbol: 'EWJ', type: 'ETF' },
-      { symbol: 'VWO', type: 'ETF' },
-      { symbol: 'EEM', type: 'ETF' },
-      { symbol: 'EWZ', type: 'ETF' },
-      { symbol: 'MCHI', type: 'ETF' },
-      { symbol: 'BTC', type: 'Crypto' },
-      { symbol: 'ETH', type: 'Crypto' },
-      { symbol: 'SOL', type: 'Crypto' },
-      { symbol: 'XRP', type: 'Crypto' },
-      { symbol: 'SLV', type: 'ETF' },
-      { symbol: 'GLD', type: 'ETF' },
-      { symbol: 'GBPUSD', type: 'Forex' },
-      { symbol: 'USDINR', type: 'Forex' }
+      { symbol:'VOO', type:'ETF' },
+      { symbol:'VEA', type:'ETF' },
+      { symbol:'VTI', type:'ETF' },
+      { symbol:'EWJ', type:'ETF' },
+      { symbol:'VWO', type:'ETF' },
+      { symbol:'EEM', type:'ETF' },
+      { symbol:'EWZ', type:'ETF' },
+      { symbol:'MCHI', type:'ETF' },
+      { symbol:'BTC', type:'Crypto' },
+      { symbol:'ETH', type:'Crypto' },
+      { symbol:'SOL', type:'Crypto' },
+      { symbol:'XRP', type:'Crypto' },
+      { symbol:'SLV', type:'ETF' },
+      { symbol:'GLD', type:'ETF' },
+      { symbol:'GBPUSD', type:'Forex' },
+      { symbol:'USDINR', type:'Forex' }
     ];
 
-    let portfolio = investments.map(i => ({
-      ...i, price: 0, ma: 0, pos: '', dist: 0, src: '—'
+    // Internal state
+    let portfolio = investments.map((i,idx)=>({
+      ...i, price:0, ma:0, pos:'', dist:0, src:'', idx:idx+1
     }));
 
-    function getKey() {
-      return API_KEYS[keyIndex];
+    // Utility: display message
+    function showMessage(text,cls='success'){
+      const m=document.getElementById('messages');
+      m.innerHTML=`<div class="message ${cls}">${text}</div>`;
+      setTimeout(()=>m.innerHTML='',5000);
     }
-    function rotateKey() {
-      keyIndex = (keyIndex + 1) % API_KEYS.length;
-    }
-    function showMessage(msg, cls = 'success') {
-      const m = document.getElementById('messages');
-      m.innerHTML = `<div class="message ${cls}">${msg}</div>`;
-      setTimeout(()=> m.innerHTML = '', 8000);
-    }
-    function render() {
-      const b = document.getElementById('portfolio-tbody');
-      b.innerHTML = portfolio.map((inv, i) => `
+
+    // Render table
+    function render(){
+      const body=document.getElementById('portfolio-tbody');
+      body.innerHTML=portfolio.map(inv=>`
         <tr>
-          <td>${i+1}. ${inv.symbol}</td>
+          <td>${inv.idx}</td>
+          <td>${inv.symbol}</td>
+          <td>${inv.type}</td>
           <td>${inv.price?inv.price.toFixed(2):'—'}</td>
           <td>${inv.ma?inv.ma.toFixed(2):'—'}</td>
           <td>${inv.pos||'—'}</td>
           <td>${inv.dist?inv.dist.toFixed(2)+'%':'—'}</td>
-          <td>${inv.src}</td>
+          <td>${inv.src||'—'}</td>
         </tr>`).join('');
     }
-    function updateStats() {
-      // implement if you have stats fields
-    }
 
-    async function fetchAV(sym, fn) {
-      const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${sym}&apikey=${getKey()}`;
-      const r = await fetch(url).then(r=>r.json());
-      apiCallsUsed++;
-      if(r['Information']||r['Note']) {
-        rotateKey();
+    // Fetch from Alpha Vantage
+    async function fetchAV(sym,fn){
+      const key=API_KEYS[keyIndex];
+      const url=`https://www.alphavantage.co/query?function=${fn}&symbol=${sym}&apikey=${key}`;
+      const r=await fetch(url).then(r=>r.json());
+      if(r['Information']||r['Note']){
+        keyIndex=(keyIndex+1)%API_KEYS.length;
         throw new Error('rate limit');
       }
       return r;
     }
 
-    async function fetchAlpha(inv) {
-      const fn = inv.type==='Crypto'?'DIGITAL_CURRENCY_DAILY'
-               : inv.type==='Forex'  ? 'FX_DAILY'
-               : 'TIME_SERIES_DAILY';
-      const j = await fetchAV(inv.symbol, fn);
-      const ts = fn==='DIGITAL_CURRENCY_DAILY'
-        ? j['Time Series (Digital Currency Daily)']
-        : fn==='FX_DAILY'
-        ? j['Time Series FX (Daily)']
-        : j['Time Series (Daily)'];
-      if(!ts) throw new Error('nodata');
-      const closes = Object.values(ts).map(d =>
-        fn==='DIGITAL_CURRENCY_DAILY'
-          ? parseFloat(d['4a. close (USD)'])
-          : parseFloat(d['4. close'])
-      ).filter(p=>!isNaN(p));
-      if(closes.length<50) throw new Error('nodata');
+    // Data fetchers
+    async function fetchFromAlpha(inv){
+      const fn=inv.type==='Crypto'
+        ?'DIGITAL_CURRENCY_DAILY'
+        :inv.type==='Forex'
+          ?'FX_DAILY'
+          :'TIME_SERIES_DAILY';
+      const j=await fetchAV(inv.symbol,fn);
+      const ts= fn==='DIGITAL_CURRENCY_DAILY'
+        ?j['Time Series (Digital Currency Daily)']
+        :fn==='FX_DAILY'
+          ?j['Time Series FX (Daily)']
+          :j['Time Series (Daily)'];
+      if(!ts)throw new Error('nodata');
+      const closes=Object.values(ts)
+        .map(d=>fn==='DIGITAL_CURRENCY_DAILY'
+          ?parseFloat(d['4a. close (USD)'])
+          :parseFloat(d['4. close'])
+        ).filter(p=>!isNaN(p));
+      if(closes.length<50)throw new Error('nodata');
       return closes.slice(0,50).reverse();
     }
 
-    async function fetchYahoo(sym) {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=60d`;
-      const j = await fetch(url).then(r=>r.json());
-      const arr = j.chart?.result?.[0]?.indicators.quote?.[0]?.close || [];
-      const c = arr.filter(p=>p!=null);
-      if(c.length<50) throw new Error('nodata');
+    async function fetchFromYahoo(sym){
+      const url=`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=60d`;
+      const j=await fetch(url).then(r=>r.json());
+      const arr=j.chart?.result?.[0]?.indicators?.quote?.[0]?.close||[];
+      const c=arr.filter(p=>p!=null);
+      if(c.length<50)throw new Error('nodata');
       return c.slice(-50).reverse();
     }
 
-    async function fetchCG(sym) {
-      const map = { BTC:'bitcoin', ETH:'ethereum', SOL:'solana', XRP:'ripple' };
-      const id = map[sym];
-      if(!id) throw new Error('nocg');
-      const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=60`;
-      const j = await fetch(url).then(r=>r.json());
-      const c = j.prices.map(p=>p[1]).filter(p=>!isNaN(p));
-      if(c.length<50) throw new Error('nodata');
+    async function fetchFromCoinGecko(sym){
+      const map={BTC:'bitcoin',ETH:'ethereum',SOL:'solana',XRP:'ripple'};
+      const id=map[sym]; if(!id)throw new Error('nocg');
+      const url=`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=60`;
+      const j=await fetch(url).then(r=>r.json());
+      const c=j.prices.map(p=>p[1]).filter(p=>!isNaN(p));
+      if(c.length<50)throw new Error('nocg');
       return c.slice(-50).reverse();
     }
 
-    function process(inv, arr, src) {
-      const price = arr[arr.length-1];
-      const ma = arr.reduce((a,b)=>a+b)/arr.length;
-      const pos = price>ma?'above':'below';
-      const dist = (price-ma)/ma*100;
-      return { price,ma,pos,dist,src };
+    function process(inv,arr,source){
+      const price=arr[arr.length-1];
+      const ma=arr.reduce((a,b)=>a+b)/arr.length;
+      const pos=price>ma?'above':'below';
+      const dist=(price-ma)/ma*100;
+      return { price,ma,pos,dist,src:source };
     }
 
-    async function fetchData(inv) {
+    // Main fetch logic
+    async function fetchData(inv){
       try {
-        const a = await fetchAlpha(inv);
-        return process(inv,a,'AV');
+        const a=await fetchFromAlpha(inv);
+        return process(inv,a,'AlphaV');
       } catch {
-        if(inv.type!=='Crypto') {
-          try {
-            const y = await fetchYahoo(inv.symbol);
-            return process(inv,y,'Yahoo');
-          } catch{}
+        if(inv.type!=='Crypto'){
+          try{ const y=await fetchFromYahoo(inv.symbol);return process(inv,y,'Yahoo');}catch{}
         }
-        if(inv.type==='Crypto') {
-          try {
-            const c = await fetchCG(inv.symbol);
-            return process(inv,c,'CG');
-          } catch{}
+        if(inv.type==='Crypto'){
+          try{ const c=await fetchFromCoinGecko(inv.symbol);return process(inv,c,'CG');}catch{}
         }
-        return { error:'no data',src:'failed' };
       }
+      return { price:0,ma:0,pos:'',dist:0,src:'Failed' };
     }
 
-    async function checkAll() {
-      if(isChecking) return;
+    // Run through all
+    async function checkAll(){
+      if(isChecking)return;
       isChecking=true;
       document.getElementById('check-btn').disabled=true;
-      showMessage('Checking investments…','success');
+      showMessage('Checking…');
       for(let i=0;i<portfolio.length;i++){
-        document.getElementById('check-btn').textContent=`Checking ${portfolio[i].symbol}`;
-        const r = await fetchData(portfolio[i]);
-        if(!r.error) Object.assign(portfolio[i],r);
+        const r=await fetchData(portfolio[i]);
+        Object.assign(portfolio[i],r);
         render();
         await new Promise(r=>setTimeout(r,10000));
       }
-      document.getElementById('check-btn').textContent='🔄 Check All My Investments';
       document.getElementById('check-btn').disabled=false;
-      showMessage('✅ Done','success');
+      showMessage('Done','success');
       isChecking=false;
     }
 
